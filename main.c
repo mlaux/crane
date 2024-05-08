@@ -32,6 +32,9 @@
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
 struct nk_colorf palette[8 * 16];
+int use_palette; // TODO
+nk_bool show_layer_1;
+nk_bool show_layer_2;
 
 int main(int argc, char *argv[])
 {
@@ -96,17 +99,16 @@ int main(int argc, char *argv[])
         nk_input_end(ctx);
 
         /* GUI */
-        if (nk_begin(ctx, "Palette", nk_rect(16, 16, 512, 336),
+        if (nk_begin(ctx, "Palette", nk_rect(16, 16, 368, 224),
               NK_WINDOW_BORDER
             | NK_WINDOW_MOVABLE
-            | NK_WINDOW_SCALABLE
             | NK_WINDOW_MINIMIZABLE
             | NK_WINDOW_TITLE))
         {
           int row, col;
           for (row = 0; row < 8; row++) {
             char label[2] = { 0 };
-            nk_layout_row_dynamic(ctx, 32, 17);
+            nk_layout_row_static(ctx, 16, 16, 17);
             label[0] = row + '0';
             nk_label(ctx, label, NK_TEXT_CENTERED);
             for (col = 0; col < 16; col++) {
@@ -135,6 +137,10 @@ int main(int argc, char *argv[])
             | NK_WINDOW_MINIMIZABLE
             | NK_WINDOW_TITLE))
         {
+          nk_layout_row_static(ctx, 16, 80, 3);
+          nk_label(ctx, "Show layer", NK_TEXT_LEFT);
+          nk_checkbox_label(ctx, "1", &show_layer_1);
+          nk_checkbox_label(ctx, "2", &show_layer_2);
 
         }
         nk_end(ctx);
@@ -146,7 +152,9 @@ int main(int argc, char *argv[])
             | NK_WINDOW_MINIMIZABLE
             | NK_WINDOW_TITLE))
         {
-
+          nk_layout_row_dynamic(ctx, 16, 2);
+          nk_label(ctx, "Use palette", NK_TEXT_LEFT);
+          nk_property_int(ctx, "##use_palette", 0, &use_palette, 7, 1, 1);
         }
         nk_end(ctx);
 
