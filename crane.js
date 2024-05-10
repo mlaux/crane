@@ -1,14 +1,27 @@
 const pixels = [];
 
+function makePalette(pn) {
+    const row = document.createElement('div');
+    row.className = 'pixel-row';
+    row.innerText = pn + ' ';
+    for (let x = 0; x < 16; x++) {
+        const entry = document.createElement('input');
+        entry.type = 'color';
+        entry.className = 'palette-entry';
+        //entry.className = 'pixel';
+
+        row.appendChild(entry);
+    }
+    document.getElementById('palettes').appendChild(row);
+}
+
 for (let y = 0; y < 16; y++) {
     pixels[y] = [];
+    const row = document.createElement('div');
+    row.className = 'pixel-row';
     for (let x = 0; x < 16; x++) {
         const pix = document.createElement('div');
-        pix.style.position = 'absolute';
-        pix.style.top = 50 + y * 32 + 'px';
-        pix.style.left = 20 + x * 32 + 'px';
-        pix.style.width = '32px';
-        pix.style.height = '32px';
+        pix.className = 'pixel';
         pix.style.backgroundColor = '#000000';
         pix.onclick = function() {
             if (this.hasAttribute('data-selected')) {
@@ -20,7 +33,13 @@ for (let y = 0; y < 16; y++) {
             }
             //recomputeArray();
         };
-        document.body.appendChild(pix);
         pixels[y].push(pix);
+        row.appendChild(pix);
     }
+
+    document.getElementById('pixels-container').appendChild(row);
+}
+
+for (let pn = 0; pn < 8; pn++) {
+    makePalette(pn);
 }
