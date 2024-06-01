@@ -14,7 +14,7 @@
         <main>
             <fieldset id="tile-library">
                 <legend>Tile library</legend>
-                <button onclick="openTileEditor()">+</button>
+                <button onclick="openTileEditor()">New</button>
             </fieldset>
             <fieldset id="background-editor">
                 <legend>Background</legend>
@@ -25,7 +25,11 @@
                     <div id="pixels-container">
 
                     </div>
-                     <input type="number" min="0" max="7" value="0">
+                    <div id="editor-palette-area">
+                        <div id="editor-palette-selector-container">
+                            <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

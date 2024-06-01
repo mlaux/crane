@@ -2,6 +2,10 @@ const pixels = [];
 const paletteEntries = [];
 const editorPaletteEntries = [];
 
+const editorOverlay = document.getElementById('tile-editor-overlay');
+const editor = document.getElementById('tile-editor');
+const editorPaletteSelector = document.getElementById('editor-palette-selector');
+
 function selectPaletteEntry(entry) {
     for (let k = 0; k < editorPaletteEntries.length; k++) {
         editorPaletteEntries[k].classList.remove('palette-entry-selected');
@@ -46,13 +50,15 @@ for (let y = 0; y < 16; y++) {
         const pix = document.createElement('div');
         pix.className = 'pixel';
         pix.style.backgroundColor = '#000000';
+        pix.setAttribute('data-palette-index', '0');
+
         pix.onclick = function() {
-            if (this.hasAttribute('data-selected')) {
-                this.removeAttribute('data-selected');
-                this.style.backgroundColor = '#000000';
-            } else {
-                this.setAttribute('data-selected', 'true');
-                this.style.backgroundColor = '#00ffff';
+            const selectedEntries = document.getElementsByClassName('palette-entry-selected');
+            if (selectedEntries.length) {
+                const selectedEntry = selectedEntries[0];
+                const index = editorPaletteEntries.indexOf(selectedEntry);
+                this.style.backgroundColor = selectedEntries[0].value;
+                this.setAttribute('data-palette-index', index.toString());
             }
         };
         pixels[y].push(pix);
@@ -63,8 +69,43 @@ for (let y = 0; y < 16; y++) {
 }
 
 function openTileEditor() {
-    document.getElementById('tile-editor-overlay').style.display = 'block';
+    editorOverlay.style.display = 'flex';
+    editorPaletteSelector.onchange();
 }
+
+function closeTileEditor() {
+    editorOverlay.style.display = 'none';
+}
+
+function copyPaletteToEditor(index) {
+    const base = index * 16;
+    for (let k = 0; k < 16; k++) {
+        editorPaletteEntries[k].value = paletteEntries[base + k].value;
+    }
+}
+
+function redrawPixels() {
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+            const colorIndex = pixels[y][x].getAttribute('data-palette-index');
+            const color = editorPaletteEntries[colorIndex].value;
+            pixels[y][x].style.backgroundColor = color;
+        }
+    }
+}
+
+editorOverlay.onclick = function(evt) {
+    const els = document.elementsFromPoint(evt.x, evt.y);
+    // don't close if clicked inside the editor
+    if (els.indexOf(editor) === -1) {
+        closeTileEditor();
+    }
+};
+
+editorPaletteSelector.onchange = function() {
+    copyPaletteToEditor(editorPaletteSelector.value);
+    redrawPixels(editorPaletteSelector.value);
+};
 
 for (let pn = 0; pn < 8; pn++) {
     const palette = makePalette(pn);
@@ -72,4 +113,4 @@ for (let pn = 0; pn < 8; pn++) {
 }
 
 const editorPalette = makePalette(null, true);
-document.getElementById('tile-editor').appendChild(editorPalette);
+document.getElementById('editor-palette-area').appendChild(editorPalette);

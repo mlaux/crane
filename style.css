@@ -4,6 +4,7 @@ body {
 }
 
 header {
+    margin-top: 64px;
     margin-bottom: 16px;
 }
 
@@ -83,4 +84,16 @@ fieldset {
 
 .palette-entry-selected {
     border: 1px solid red;
+    height: 34px;
+}
+
+#editor-palette-area {
+    vertical-align: middle;
+}
+
+#editor-palette-selector-container {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    vertical-align: middle;
 }
