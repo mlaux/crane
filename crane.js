@@ -6,6 +6,46 @@ const editorOverlay = document.getElementById('tile-editor-overlay');
 const editor = document.getElementById('tile-editor');
 const editorPaletteSelector = document.getElementById('editor-palette-selector');
 
+function parseData(data) {
+    for (let k = 0; k < data['colors'].length; k++) {
+        paletteEntries[k].value = data['colors'][k];
+    }
+}
+
+function loadPalettes() {
+    const input = document.createElement('input');
+    input.type = 'file';
+
+    input.onchange = function(e) { 
+        const file = e.target.files[0]; 
+        const reader = new FileReader();
+        reader.readAsText(file, 'UTF-8');
+        reader.onload = function(readerEvent) {
+            parseData(JSON.parse(readerEvent.target.result));
+        }
+    }
+
+    input.click();
+}
+
+function savePalettes() {
+    const colors = [];
+    for (let k = 0; k < paletteEntries.length; k++) {
+        colors[k] = paletteEntries[k].value;
+    }
+    const out = { colors, };
+    console.log(JSON.stringify(out));
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], {
+        type: 'text/plain'
+    }));
+    a.setAttribute('download', "data.json");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
 function selectPaletteEntry(entry) {
     for (let k = 0; k < editorPaletteEntries.length; k++) {
         editorPaletteEntries[k].classList.remove('palette-entry-selected');
@@ -104,7 +144,7 @@ editorOverlay.onclick = function(evt) {
 
 editorPaletteSelector.onchange = function() {
     copyPaletteToEditor(editorPaletteSelector.value);
-    redrawPixels(editorPaletteSelector.value);
+    redrawPixels();
 };
 
 for (let pn = 0; pn < 8; pn++) {

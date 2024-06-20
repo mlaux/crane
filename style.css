@@ -1,6 +1,9 @@
 body {
     margin: 0 auto;
     max-width: 800px;
+    font-family: sans-serif;
+    background-color: #535353;
+    color: #e0e0e0
 }
 
 header {
@@ -22,7 +25,8 @@ main {
 
 fieldset {
     border-radius: 8px;
-    border: 1px solid black;
+    border: 1px solid #e0e0e0;
+    background-color: #282828;
 }
 
 .pixel {
@@ -54,17 +58,17 @@ fieldset {
     width: 600px;
     height: 400px;
     margin: auto;
-    background-color: white;
+    background-color: #282828;
     border-radius: 8px;
     padding: 0 1rem;
-    border: 1px solid black;
+    border: 1px solid #e0e0e0;
 }
 
 .group-title {
     margin-top: -1.5lh;
     margin-bottom: 1.5lh;
-    border: 1px solid black;
-    background-color: white;
+    border: 1px solid #e0e0e0;
+    background-color: #282828;
     border-radius: 8px;
     padding: 0 16px;
     text-shadow: 1px 1px gray;
