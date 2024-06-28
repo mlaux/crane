@@ -7,7 +7,7 @@ body {
 }
 
 header {
-    margin-top: 64px;
+    margin-top: 16px;
     margin-bottom: 16px;
 }
 
@@ -17,6 +17,7 @@ main {
 
 #tile-library {
     flex: 1;
+    margin-right: 20px;
 }
 
 #background-editor {
@@ -110,8 +111,14 @@ canvas {
     background-color: black;
     width: 512px;
     height: 512px;
+    margin: 0 auto;
+    display: block;
 }
 
 .tile {
     margin-right: 4px;
+}
+
+#script-box {
+    width: 100%;
 }
