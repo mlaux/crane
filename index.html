@@ -15,6 +15,9 @@
             <fieldset id="tile-library">
                 <legend>Tile library</legend>
                 <p><button onclick="openTileEditor()">New</button></p>
+                <div id="tile-entries">
+
+                </div>
             </fieldset>
             <fieldset id="background-editor">
                 <legend>Background</legend>
@@ -26,6 +29,8 @@
                     <div id="pixels-container">
 
                     </div>
+                    <button onclick="zoomOut()">Zoom out</button>
+                    <button onclick="zoomIn()">Zoom in</button>
                     <div id="editor-palette-area">
                         <div id="editor-palette-selector-container">
                             <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
@@ -36,8 +41,9 @@
         </main>
 
         <p>
-            <button onclick="loadPalettes()">Load</button>
+            <input placeholder="Project name" id="project-name">
             <button onclick="savePalettes()">Save</button>
+            <button onclick="loadPalettes()">Load</button>
             <button onclick="clearPalettes()">Clear everything</button>
         </p>
         <script src="crane.js"></script>

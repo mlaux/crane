@@ -57,7 +57,6 @@ fieldset {
 
 #tile-editor {
     width: 600px;
-    height: 400px;
     margin: auto;
     background-color: #282828;
     border-radius: 8px;
@@ -89,6 +88,7 @@ fieldset {
 
 .palette-entry-selected {
     border: 1px solid red;
+    background-color: #282828;
     height: 34px;
 }
 
