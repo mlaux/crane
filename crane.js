@@ -5,8 +5,8 @@ const editorPaletteEntries = [];
 const tiles = [];
 let curTile = null;
 
-const ZOOMS = [4, 8, 16, 32];
-let zoomIndex = 2;
+const ZOOMS = [8, 16, 32];
+let zoomIndex = 1;
 
 const editorOverlay = document.getElementById('tile-editor-overlay');
 const editor = document.getElementById('tile-editor');
@@ -328,3 +328,17 @@ for (let pn = 0; pn < 8; pn++) {
 
 const editorPalette = makePalette(null, true);
 document.getElementById('editor-palette-area').appendChild(editorPalette);
+
+document.getElementById('zoom-in').onclick = function(e) {
+    zoomIn();
+    e.stopPropagation();
+}
+
+document.getElementById('zoom-out').onclick = function(e) {
+    zoomOut();
+    e.stopPropagation();
+}
+
+window.onbeforeunload = function() {
+    return true;
+};
