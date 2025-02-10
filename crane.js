@@ -173,7 +173,7 @@ function createTile() {
     canvas.height = 16;
     canvas.style.width = '64px';
     canvas.style.height = '64px';
-    canvas.style.backgroundColor = 'black';
+    canvas.style.backgroundColor = 'white';
     canvas.onclick = function() {
         openTileEditor(newTile);
     };
@@ -186,25 +186,14 @@ function createTile() {
 function closeTileEditor() {
     editorOverlay.style.display = 'none';
 
-    let indices = curTile.data;
-    let canvas = curTile.canvas;
-
-    const ctx = canvas.getContext("2d");
-    const image = ctx.createImageData(16, 16);
-
+    // copy from pixel editor to tile data
     for (let y = 0; y < 16; y++) {
         for (let x = 0; x < 16; x++) {
-            const index = 4 * (y * 16 + x);
             const colorIndex = parseInt(pixels[y][x].getAttribute('data-palette-index'));
-            const color = parseInt(editorPaletteEntries[colorIndex].value.substring(1), 16);
-            image.data[index] = color >> 16 & 0xff;
-            image.data[index + 1] = color >> 8 & 0xff;
-            image.data[index + 2] = color & 0xff;
-            image.data[index + 3] = 0xff;
-            indices[y * 16 + x] = colorIndex;
+            curTile.data[y * 16 + x] = colorIndex;
         }
     }
-    ctx.putImageData(image, 0, 0);
+    redrawTile(curTile);
 }
 
 function loadTile(data) {
@@ -223,7 +212,10 @@ function redrawTile(tile) {
         for (let x = 0; x < 16; x++) {
             const index = 4 * (y * 16 + x);
             const colorIndex = parseInt(tile.data[y * 16 + x]);
-            const color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
+            let color = 0xffffff;
+            if (colorIndex != 0) {
+                color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
+            }
             image.data[index] = color >> 16 & 0xff;
             image.data[index + 1] = color >> 8 & 0xff;
             image.data[index + 2] = color & 0xff;
@@ -306,6 +298,14 @@ for (let y = 0; y < 16; y++) {
 
     document.getElementById('pixels-container').appendChild(row);
 }
+
+// const container = document.getElementById('pixels-container');
+// const grid = document.getElementById('grid');
+// grid.style.position = 'absolute';
+// grid.style.left = container.style.left;
+// grid.style.top = container.style.top;
+// grid.style.width = container.style.width;
+// grid.style.height = container.style.height;
 
 editorOverlay.onclick = function(evt) {
     const els = document.elementsFromPoint(evt.x, evt.y);

@@ -40,6 +40,12 @@ fieldset {
     height: 16px;
     -webkit-user-select: none;
     user-select: none;
+    border-right: 1px solid red;
+    border-bottom: 1px solid red;
+}
+
+.pixel:last-child {
+    border-right: none;
 }
 
 .pixel-row {
@@ -47,6 +53,10 @@ fieldset {
     -webkit-user-select: none;
     user-select: none;
     vertical-align: middle;
+}
+
+.pixel-row:last-child .pixel {
+    border-bottom: none;
 }
 
 #tile-editor-overlay {
