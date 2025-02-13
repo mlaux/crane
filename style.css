@@ -94,16 +94,20 @@ fieldset {
 }
 
 .palette-entry {
+    border: 1px solid #282828;
+    background-color: #282828;
     width: 32px;
     height: 32px;
     margin: 0;
     padding: 0;
 }
 
-.palette-entry-selected {
+.palette-entry.palette-entry-selected {
     border: 1px solid red;
-    background-color: #282828;
-    height: 34px;
+}
+
+#tile-library-top {
+    margin-bottom: 4px;
 }
 
 #editor-palette-area {
@@ -130,7 +134,12 @@ canvas {
 }
 
 .tile {
-    margin-right: 4px;
+    margin: 2px;
+    border: 2px solid #282828;
+}
+
+.tile.tile-selected {
+    border: 2px solid red;
 }
 
 #script-box {

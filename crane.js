@@ -3,7 +3,8 @@ const paletteEntries = [];
 const editorPaletteEntries = [];
 
 const tiles = [];
-let curTile = null;
+let editedTile = null;
+let selectedTileIndex = -1;
 
 const background = [];
 
@@ -111,6 +112,41 @@ function selectPaletteEntry(entry) {
     entry.classList.add('palette-entry-selected');
 }
 
+function selectTile(tile) {
+    selectedTileIndex = tiles.indexOf(tile);
+    for (let k = 0; k < tiles.length; k++) {
+        tiles[k].canvas.classList.remove('tile-selected');
+    }
+    tile.canvas.classList.add('tile-selected');
+}
+
+function deleteTile() {
+    if (selectedTileIndex === -1) {
+        return;
+    }
+
+    const tile = tiles[selectedTileIndex];
+    // remove from the main list
+    tiles.splice(selectedTileIndex, 1);
+
+    // remove from the tile list in the document
+    document.getElementById('tile-entries').removeChild(tile.canvas);
+
+    // remove deleted tile from the background and shift tiles above it down one
+    for (let y = 0; y < BG_HEIGHT_TILES; y++) {
+        for (let x = 0; x < BG_WIDTH_TILES; x++) {
+            if (background[y][x] > selectedTileIndex) {
+                background[y][x]--;
+            } else if (background[y][x] === selectedTileIndex) {
+                background[y][x] = -1;
+            }
+        }
+    }
+
+    redrawBackground();
+    selectedTileIndex = -1;
+}
+
 function makePalette(text, forTileEditor) {
     const row = document.createElement('div');
     if (text !== null) {
@@ -159,7 +195,7 @@ function openTileEditor(tile) {
     if (!tile) {
         tile = createTile();
     }
-    curTile = tile;
+    editedTile = tile;
 
     for (let y = 0; y < 16; y++) {
         for (let x = 0; x < 16; x++) {
@@ -175,7 +211,7 @@ function openTileEditor(tile) {
 function createTile() {
     const indices = new Array(256).fill(0);
     const canvas = document.createElement('canvas');
-    const newTile = {
+    const tile = {
         data: indices,
         palette: editorPaletteSelector.value,
         canvas: canvas,
@@ -187,13 +223,17 @@ function createTile() {
     canvas.style.width = '64px';
     canvas.style.height = '64px';
     canvas.style.backgroundColor = 'white';
-    canvas.onclick = function() {
-        openTileEditor(newTile);
+    canvas.onclick = function(evt) {
+        if (evt.shiftKey) {
+            openTileEditor(tile);
+        } else {
+            selectTile(tile);
+        }
     };
 
     document.getElementById('tile-entries').appendChild(canvas);
-    tiles.push(newTile);
-    return newTile;
+    tiles.push(tile);
+    return tile;
 }
 
 function closeTileEditor() {
@@ -203,13 +243,14 @@ function closeTileEditor() {
     for (let y = 0; y < 16; y++) {
         for (let x = 0; x < 16; x++) {
             const colorIndex = parseInt(pixels[y][x].getAttribute('data-palette-index'));
-            curTile.data[y * 16 + x] = colorIndex;
+            editedTile.data[y * 16 + x] = colorIndex;
         }
     }
 
     // editing a tile affects both the tile and the background
-    redrawTile(curTile);
+    redrawTile(editedTile);
     redrawBackground();
+    editedTile = null;
 }
 
 function loadTile(data) {
@@ -360,7 +401,7 @@ function addEventHandlers() {
     };
     
     editorPaletteSelector.onchange = function() {
-        curTile.palette = editorPaletteSelector.value;
+        editedTile.palette = editorPaletteSelector.value;
         copyPaletteToEditor(editorPaletteSelector.value);
         redrawPixels();
     };
