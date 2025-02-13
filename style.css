@@ -122,11 +122,11 @@ canvas {
 }
 
 #background-canvas {
-    background-color: black;
-    width: 512px;
-    height: 512px;
-    margin: 0 auto;
     display: block;
+    margin: 0 auto;
+    width: 512px;
+    height: 448px;
+    background-color: black;
 }
 
 .tile {
