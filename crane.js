@@ -199,7 +199,7 @@ function makePalette(text, forTileEditor) {
 }
 
 function onTileEditorPaletteEntryChanged() {
-    copyEditorPaletteToGlobal(editorPaletteSelector.value);
+    copyEditorPaletteToGlobal(parseInt(editorPaletteSelector.value));
     redrawPixels();
     redrawTiles();
 }
@@ -222,7 +222,7 @@ function openTileEditor(tile) {
     }
 
     editorOverlay.style.display = 'flex';
-    editorPaletteSelector.value = tile.palette;
+    editorPaletteSelector.value = tile.palette.toString();
     editorPaletteSelector.onchange();
 }
 
@@ -231,7 +231,7 @@ function createTile() {
     const canvas = document.createElement('canvas');
     const tile = {
         data: indices,
-        palette: editorPaletteSelector.value,
+        palette: parseInt(editorPaletteSelector.value),
         canvas: canvas,
     };
 
@@ -373,14 +373,14 @@ function redrawPixels() {
 }
 
 function importPalette() {
-    // TODO: actual UI for this lol
-    let url = prompt("Paste in a url from lospec.com's palette list");
+    const urlField = document.getElementById('palette-import-url');
+    let url = urlField.value;
     if (!url) {
         return;
     }
     url += '.json';
 
-    let where = parseInt(prompt('Which palette do you want to put it in? (0-7, default 0)'));
+    let where = parseInt(document.getElementById('palette-import-index').value);
     if (!where || where < 0 || where > 7) {
         where = 0;
     }
@@ -397,6 +397,8 @@ function importPalette() {
         for (let k = 0; k < obj.colors.length; k++) {
             paletteEntries[baseIndex + k].value = `#${obj.colors[k]}`;
         }
+
+        urlField.value = '';
 
         redrawTiles();
         redrawBackground();
@@ -465,8 +467,9 @@ function addEventHandlers() {
     };
     
     editorPaletteSelector.onchange = function() {
-        editedTile.palette = editorPaletteSelector.value;
-        copyPaletteToEditor(editorPaletteSelector.value);
+        const num = parseInt(editorPaletteSelector.value);
+        editedTile.palette = num;
+        copyPaletteToEditor(num);
         redrawPixels();
     };
     

@@ -7,8 +7,14 @@
     </head>
     <body>
         <header>
-            <fieldset id="palettes">
+            <fieldset id="palettes-container">
                 <legend>Palettes</legend>
+                <div id="palettes"></div>
+                <div>
+                    Place <input placeholder="https://lospec.com/palette-list/&lt;something&gt;" id="palette-import-url">
+                    in <input id="palette-import-index" type="number" min="0" max="7" value="0">
+                    <button onclick="importPalette()">Import</button>
+                </div>
             </fieldset>
         </header>
         <main>
@@ -53,12 +59,12 @@
             <input placeholder="Project name" id="project-name">
             <button onclick="savePalettes()">Save</button>
             <button onclick="loadPalettes()">Load</button>
-            <button onclick="importPalette()">Import palette</button>
         </p>
 
         <h1>Help</h1>
         <h2>Palettes</h2>
         <p>Click a palette entry to change its color.</p>
+        <p>Enter a URL from <a href="https://lospec.com/palette-list">Lospec's palette list</a> and click "Import" to load the palette.</p>
 
         <h2>Tile editor</h2>
         <p>Click "New" to create a new tile. To edit an existing tile, hold Shift while clicking it in the tile library.</p>
@@ -74,7 +80,6 @@
         <h2>Loading and saving</h2>
         <p>Enter a name and click Save to save your project.</p>
         <p>Click Load and select a project file from your computer to load it.</p>
-        <p>Click "Import palette" to load a palette from <a href="https://lospec.com/palette-list">Lospec's palette list</a>.</p>
 
         <p><em>Crane SNES graphics editor revision ${GIT_SHA} by <a href="http://constcast.org">constcast</a></em></p>
 
