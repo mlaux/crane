@@ -268,7 +268,10 @@ function closeTileEditor() {
     // editing a tile affects both the tile and the background
     redrawTile(editedTile);
     redrawBackground();
-    updateOverlay(editedTile);
+    // don't update overlay if editing a tile that's not the selected one
+    if (selectedTileIndex !== -1 && editedTile === tiles[selectedTileIndex]) {
+        updateOverlay(editedTile);
+    }
     editedTile = null;
 }
 
@@ -397,6 +400,9 @@ function importPalette() {
 
         redrawTiles();
         redrawBackground();
+        if (selectedTileIndex !== -1) {
+            updateOverlay(tiles[selectedTileIndex]);
+        }
     })();
 }
 
