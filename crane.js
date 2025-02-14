@@ -122,6 +122,7 @@ function selectTile(tile) {
     const overlay = document.getElementById('background-overlay');
     const ctx = overlay.getContext("2d");
 
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
     ctx.drawImage(tile.canvas, 0, 0);
 }
 
@@ -277,14 +278,14 @@ function redrawTile(tile) {
         for (let x = 0; x < 16; x++) {
             const index = 4 * (y * 16 + x);
             const colorIndex = parseInt(tile.data[y * 16 + x]);
-            let color = 0xffffff;
             if (colorIndex != 0) {
-                color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
+                const color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
+
+                image.data[index] = color >> 16 & 0xff;
+                image.data[index + 1] = color >> 8 & 0xff;
+                image.data[index + 2] = color & 0xff;
+                image.data[index + 3] = 0xff;
             }
-            image.data[index] = color >> 16 & 0xff;
-            image.data[index + 1] = color >> 8 & 0xff;
-            image.data[index + 2] = color & 0xff;
-            image.data[index + 3] = 0xff;
         }
     }
     ctx.putImageData(image, 0, 0);
