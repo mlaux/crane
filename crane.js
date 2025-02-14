@@ -299,11 +299,11 @@ function redrawBackground() {
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
             if (background[y][x] === -1) {
-                continue;
+                bgContext.clearRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            } else { 
+                const tile = tiles[background[y][x]];
+                bgContext.drawImage(tile.canvas, x * TILE_SIZE, y * TILE_SIZE);
             }
-
-            const tile = tiles[background[y][x]];
-            bgContext.drawImage(tile.canvas, x * TILE_SIZE, y * TILE_SIZE);
         }
     }
 }
@@ -483,9 +483,12 @@ function addEventHandlers() {
 
         const x = Math.floor(e.offsetX / 32);
         const y = Math.floor(e.offsetY / 32);
-        console.log(x, y, selectedTileIndex);
 
-        background[y][x] = selectedTileIndex;
+        if (e.shiftKey) {
+            background[y][x] = -1;
+        } else {
+            background[y][x] = selectedTileIndex;
+        }
         redrawBackground();
     }
     
