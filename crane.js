@@ -119,11 +119,7 @@ function selectTile(tile) {
     }
     tile.canvas.classList.add('tile-selected');
 
-    const overlay = document.getElementById('background-overlay');
-    const ctx = overlay.getContext("2d");
-
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
-    ctx.drawImage(tile.canvas, 0, 0);
+    updateOverlay(tile);
 }
 
 function deleteTile() {
@@ -259,6 +255,7 @@ function closeTileEditor() {
     // editing a tile affects both the tile and the background
     redrawTile(editedTile);
     redrawBackground();
+    updateOverlay(editedTile);
     editedTile = null;
 }
 
@@ -311,6 +308,14 @@ function redrawBackground() {
     }
 }
 
+function updateOverlay(tile) {
+    const overlay = document.getElementById('background-overlay');
+    const ctx = overlay.getContext("2d");
+
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    ctx.drawImage(tile.canvas, 0, 0);
+}
+
 function canvasToTile(c) {
     for (let k = 0; k < tiles.length; k++) {
         if (tiles[k].canvas === c) {
@@ -349,6 +354,43 @@ function redrawPixels() {
             }
         }
     }
+}
+
+function importPalette() {
+    // TODO: actual UI for this lol
+    let url = prompt("Paste in a url from lospec.com's palette list");
+    if (!url) {
+        url = 'https://lospec.com/palette-list/blessing.json';
+    } else {
+        url += '.json';
+    }
+    let where = prompt('Which palette do you want to put it in? (0-7)');
+    try {
+        where = parseInt(where);
+    } catch (e) {
+        where = 0;
+    }
+    if (where < 0 || where > 7) {
+        where = 0;
+    }
+
+    (async () => {
+        const response = await fetch(url);
+        if (!response.ok) {
+            return;
+        }
+
+        const obj = await response.json();
+        console.log(obj.colors);
+
+        const baseIndex = where * 16 + 1; // +1 to skip transparent
+        for (let k = 0; k < obj.colors.length; k++) {
+            paletteEntries[baseIndex + k].value = `#${obj.colors[k]}`;
+        }
+
+        redrawTiles();
+        redrawBackground();
+    })();
 }
 
 function initializePalettes() {
