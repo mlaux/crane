@@ -119,11 +119,7 @@ function selectTile(tile) {
     }
     tile.canvas.classList.add('tile-selected');
 
-    const overlay = document.getElementById('background-overlay');
-    const ctx = overlay.getContext("2d");
-
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
-    ctx.drawImage(tile.canvas, 0, 0);
+    updateOverlay(tile);
 }
 
 function deleteTile() {
@@ -259,6 +255,7 @@ function closeTileEditor() {
     // editing a tile affects both the tile and the background
     redrawTile(editedTile);
     redrawBackground();
+    updateOverlay(editedTile);
     editedTile = null;
 }
 
@@ -309,6 +306,14 @@ function redrawBackground() {
             bgContext.drawImage(tile.canvas, x * TILE_SIZE, y * TILE_SIZE);
         }
     }
+}
+
+function updateOverlay(tile) {
+    const overlay = document.getElementById('background-overlay');
+    const ctx = overlay.getContext("2d");
+
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    ctx.drawImage(tile.canvas, 0, 0);
 }
 
 function canvasToTile(c) {
