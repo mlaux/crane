@@ -54,6 +54,18 @@ function parseData(data) {
     for (let k = 0; k < data['tiles'].length; k++) {
         loadTile(data['tiles'][k]);
     }
+
+    if (!data.background) {
+        // skip for earlier files that only have colors/tiles
+        return;
+    }
+
+    for (let y = 0; y < BG_HEIGHT_TILES; y++) {
+        for (let x = 0; x < BG_WIDTH_TILES; x++) {
+            background[y][x] = data.background[y][x];
+        }
+    }
+    redrawBackground();
 }
 
 function loadPalettes() {
@@ -92,6 +104,7 @@ function savePalettes() {
         name,
         colors,
         tiles: outTiles,
+        background,
     };
     console.log(JSON.stringify(out));
 
@@ -360,17 +373,12 @@ function importPalette() {
     // TODO: actual UI for this lol
     let url = prompt("Paste in a url from lospec.com's palette list");
     if (!url) {
-        url = 'https://lospec.com/palette-list/blessing.json';
-    } else {
-        url += '.json';
+        return;
     }
-    let where = prompt('Which palette do you want to put it in? (0-7)');
-    try {
-        where = parseInt(where);
-    } catch (e) {
-        where = 0;
-    }
-    if (where < 0 || where > 7) {
+    url += '.json';
+
+    let where = parseInt(prompt('Which palette do you want to put it in? (0-7, default 0)'));
+    if (!where || where < 0 || where > 7) {
         where = 0;
     }
 
@@ -381,7 +389,6 @@ function importPalette() {
         }
 
         const obj = await response.json();
-        console.log(obj.colors);
 
         const baseIndex = where * 16 + 1; // +1 to skip transparent
         for (let k = 0; k < obj.colors.length; k++) {
