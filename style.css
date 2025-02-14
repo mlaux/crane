@@ -118,11 +118,9 @@ fieldset {
     vertical-align: middle;
 }
 
-#editor-palette-selector-container {
-    width: 32px;
-    height: 32px;
-    display: inline-block;
+#editor-palette-area {
     vertical-align: middle;
+    margin-bottom: 8px;
 }
 
 canvas {
