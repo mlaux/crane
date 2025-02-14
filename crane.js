@@ -118,6 +118,11 @@ function selectTile(tile) {
         tiles[k].canvas.classList.remove('tile-selected');
     }
     tile.canvas.classList.add('tile-selected');
+
+    const overlay = document.getElementById('background-overlay');
+    const ctx = overlay.getContext("2d");
+
+    ctx.drawImage(tile.canvas, 0, 0);
 }
 
 function deleteTile() {
@@ -142,6 +147,8 @@ function deleteTile() {
             }
         }
     }
+    const overlay = document.getElementById('background-overlay');
+    overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
 
     redrawBackground();
     selectedTileIndex = -1;
@@ -149,13 +156,14 @@ function deleteTile() {
 
 function makePalette(text, forTileEditor) {
     const row = document.createElement('div');
+    row.style.display = 'inline-block';
     if (text !== null) {
         row.innerText = text + ' ';
     }
-    row.style.display = 'inline-block';
     for (let x = 0; x < 16; x++) {
         const entry = document.createElement('input');
         entry.type = 'color';
+        entry.style.verticalAlign = 'middle';
         entry.classList.add('palette-entry');
         entry.className = 'palette-entry';
         if (forTileEditor) {
@@ -414,6 +422,28 @@ function addEventHandlers() {
     document.getElementById('zoom-out').onclick = function(e) {
         zoomOut();
         e.stopPropagation();
+    }
+
+    const bgCanvas = document.getElementById('background-canvas');
+    bgCanvas.onmousemove = function(e) {
+        const overlay = document.getElementById('background-overlay');
+        const x = Math.floor(e.offsetX / 32) * 32;
+        const y = Math.floor(e.offsetY / 32) * 32;
+        overlay.style.left = `${x}px`;
+        overlay.style.top = `${y}px`;
+    }
+
+    bgCanvas.onclick = function(e) {
+        if (selectedTileIndex === -1) {
+            return;
+        }
+
+        const x = Math.floor(e.offsetX / 32);
+        const y = Math.floor(e.offsetY / 32);
+        console.log(x, y, selectedTileIndex);
+
+        background[y][x] = selectedTileIndex;
+        redrawBackground();
     }
     
     window.onbeforeunload = function() {
