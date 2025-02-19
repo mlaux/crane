@@ -84,8 +84,10 @@ for (let p = 0; p < palettes.length; p++) {
 }
 
 fs.writeFileSync(`${outName}.pal`, Buffer.from(paletteDataBuf));
+console.log(`Wrote ${palettes.length} palettes to ${outName}.pal`);
 
-const tileDataLen = 0x400 + 32 * 4 * inData.tiles.length;
+// round up size to nearest multiple of 1024 to ensure space for bottom row
+const tileDataLen = Math.ceil((32 * 4 * inData.tiles.length) / 0x400) * 0x400;
 const tileDataBuf = new ArrayBuffer(tileDataLen);
 const tileDataBytes = new Uint8Array(tileDataBuf);
 
@@ -98,18 +100,18 @@ inData.tiles.forEach(tile => {
     let bottomRight = convert(subtiles.bottomRight);
     for (let k = 0; k < topLeft.length; k++) {
         tileDataBytes[outIndex] = topLeft[k];
-        tileDataBytes[0x200 + outIndex] = bottomLeft[k];
+        tileDataBytes[outIndex + 32] = topRight[k];
+        tileDataBytes[outIndex + 0x200] = bottomLeft[k];
+        tileDataBytes[outIndex + 0x200 + 32] = bottomRight[k];
 
         outIndex++;
     }
 
-    for (let k = 0; k < topLeft.length; k++) {
-        tileDataBytes[outIndex] = topRight[k];
-        tileDataBytes[0x200 + outIndex] = bottomRight[k];
-
-        outIndex++;
+    outIndex += 32;
+    if (outIndex % 0x200 == 0) {
+        outIndex += 0x200;
     }
 });
-fs.writeFileSync(`${outName}.4bp`, Buffer.from(tileDataBuf));
 
-console.log(paletteDataShorts);
+fs.writeFileSync(`${outName}.4bp`, Buffer.from(tileDataBuf));
+console.log(`Wrote ${inData.tiles.length} tiles to ${outName}.4bp`);
