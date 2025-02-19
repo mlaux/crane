@@ -12,7 +12,7 @@ const ZOOMS = [8, 16, 32];
 let zoomIndex = 1;
 
 const BG_WIDTH_TILES = 16;
-const BG_HEIGHT_TILES = 14;
+const BG_HEIGHT_TILES = 16;
 const TILE_SIZE = 16;
 
 const editorOverlay = document.getElementById('tile-editor-overlay');
@@ -60,7 +60,7 @@ function parseData(data) {
         return;
     }
 
-    for (let y = 0; y < BG_HEIGHT_TILES; y++) {
+    for (let y = 0; y < data.background.length; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
             background[y][x] = data.background[y][x];
         }
@@ -143,7 +143,9 @@ function highlightTile(tile) {
     for (let k = 0; k < tiles.length; k++) {
         tiles[k].canvas.classList.remove('tile-highlighted');
     }
-    tile.canvas.classList.add('tile-highlighted');
+    if (tile) {
+        tile.canvas.classList.add('tile-highlighted');
+    }
 }
 
 function deleteTile() {
@@ -520,6 +522,8 @@ function addEventHandlers() {
 
         if (background[y][x] !== -1) {
             highlightTile(tiles[background[y][x]]);
+        } else {
+            highlightTile(null);
         }
 
         if (e.buttons) {
