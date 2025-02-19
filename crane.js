@@ -71,15 +71,19 @@ function parseData(data) {
 function loadPalettes() {
     const input = document.createElement('input');
     input.type = 'file';
+    document.body.appendChild(input);
 
-    input.onchange = function(e) { 
-        const file = e.target.files[0]; 
+    input.addEventListener('change', evt => { 
+        const file = evt.target.files[0]; 
         const reader = new FileReader();
         reader.readAsText(file, 'UTF-8');
-        reader.onload = function(readerEvent) {
+        reader.onload = readerEvent => {
             parseData(JSON.parse(readerEvent.target.result));
         };
-    };
+        reader.onloadend = () => {
+            document.body.removeChild(input);
+        };
+    });
 
     input.click();
 }
@@ -135,6 +139,13 @@ function selectTile(tile) {
     updateOverlay(tile);
 }
 
+function highlightTile(tile) {
+    for (let k = 0; k < tiles.length; k++) {
+        tiles[k].canvas.classList.remove('tile-highlighted');
+    }
+    tile.canvas.classList.add('tile-highlighted');
+}
+
 function deleteTile() {
     if (selectedTileIndex === -1) {
         return;
@@ -166,6 +177,7 @@ function deleteTile() {
 
 function makePalette(text, forTileEditor) {
     const row = document.createElement('div');
+    row.classList.add('palette-row');
     row.style.display = 'inline-block';
     if (text !== null) {
         row.innerText = text + ' ';
@@ -486,10 +498,14 @@ function addEventHandlers() {
     const bgCanvas = document.getElementById('background-canvas');
     bgCanvas.onmousemove = function(e) {
         const overlay = document.getElementById('background-overlay');
-        const x = Math.floor(e.offsetX / 32) * 32;
-        const y = Math.floor(e.offsetY / 32) * 32;
-        overlay.style.left = `${x}px`;
-        overlay.style.top = `${y}px`;
+        const x = Math.floor(e.offsetX / 32);
+        const y = Math.floor(e.offsetY / 32);
+        overlay.style.left = `${x * 32}px`;
+        overlay.style.top = `${y * 32}px`;
+
+        if (background[y][x] !== -1) {
+            highlightTile(tiles[background[y][x]]);
+        }
     }
 
     bgCanvas.onclick = function(e) {
