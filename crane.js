@@ -266,6 +266,24 @@ function createTile() {
     return tile;
 }
 
+function placeTile(x, y, remove) {
+    background[y][x] = remove ? -1 : selectedTileIndex;
+    redrawBackground();
+}
+
+function placePixel(pix, remove) {
+    if (remove) {
+        pix.setAttribute('data-palette-index', '0');
+    } else {
+        const selectedEntries = document.getElementsByClassName('palette-entry-selected');
+        if (selectedEntries.length) {
+            const selectedEntry = selectedEntries[0];
+            const index = editorPaletteEntries.indexOf(selectedEntry);
+            pix.setAttribute('data-palette-index', index.toString());
+        }
+    }
+}
+
 function closeTileEditor() {
     editorOverlay.style.display = 'none';
 
@@ -442,19 +460,16 @@ function initializePixels() {
             pix.style.backgroundRepeat = 'repeat';
             pix.setAttribute('data-palette-index', '0');
     
-            pix.onclick = function(evt) {
-                if (evt.shiftKey) {
-                    this.setAttribute('data-palette-index', '0');
-                } else {
-                    const selectedEntries = document.getElementsByClassName('palette-entry-selected');
-                    if (selectedEntries.length) {
-                        const selectedEntry = selectedEntries[0];
-                        const index = editorPaletteEntries.indexOf(selectedEntry);
-                        this.setAttribute('data-palette-index', index.toString());
-                    }
-                }
+            pix.onmousedown = function(evt) {
+                placePixel(pix, evt.shiftKey);
                 redrawPixels();
             };
+            pix.onmousemove = function(evt) {
+                if (evt.buttons) {
+                    placePixel(pix, evt.shiftKey);
+                    redrawPixels();
+                }
+            }
             pixels[y].push(pix);
             row.appendChild(pix);
         }
@@ -506,22 +521,17 @@ function addEventHandlers() {
         if (background[y][x] !== -1) {
             highlightTile(tiles[background[y][x]]);
         }
+
+        if (e.buttons) {
+            placeTile(x, y, e.shiftKey);
+        }
     }
 
     bgCanvas.onclick = function(e) {
-        if (selectedTileIndex === -1) {
-            return;
-        }
-
         const x = Math.floor(e.offsetX / 32);
         const y = Math.floor(e.offsetY / 32);
 
-        if (e.shiftKey) {
-            background[y][x] = -1;
-        } else {
-            background[y][x] = selectedTileIndex;
-        }
-        redrawBackground();
+        placeTile(x, y, e.shiftKey);
     }
     
     window.onbeforeunload = function() {
