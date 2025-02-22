@@ -11,13 +11,23 @@ const background = [];
 const ZOOMS = [8, 16, 32];
 let zoomIndex = 1;
 
-const BG_WIDTH_TILES = 16;
-const BG_HEIGHT_TILES = 16;
-const TILE_SIZE = 16;
+const BG_WIDTH_TILES = 32;
+const BG_HEIGHT_TILES = 32;
+const BG_SCALE_FACTOR = 2;
+const bgCanvas = document.getElementById('background-canvas');
+const overlay = document.getElementById('background-overlay');
 
 const editorOverlay = document.getElementById('tile-editor-overlay');
 const editor = document.getElementById('tile-editor');
 const editorPaletteSelector = document.getElementById('editor-palette-selector');
+
+let tileSize = 16;
+
+function isDocumentEmpty() {
+    return !tiles.length 
+            && !background.some(row => row.some(el => el != -1))
+            && !paletteEntries.some(el => el.value != '#000000');
+}
 
 function resizePixels() {
     pixels.forEach(row => {
@@ -43,14 +53,29 @@ function zoomOut() {
 }
 
 function parseData(data) {
+    // TODO fix this, should have the DOM value be the only tile size.
+    // should not have 2 variables to keep in sync (radio button checked and
+    // tileSize int)
+    tileSize = data['tileSize'];
+    if (!tileSize) {
+        tileSize = 16;
+    }
+    initialize();
+
+    if (tileSize === 16) {
+        document.getElementById('tile-size-16').checked = true;
+    } else if (tileSize === 8) {
+        document.getElementById('tile-size-8').checked = true;
+    } else {
+        // todo
+    }
+
     document.getElementById('project-name').value = data['name'];
 
     for (let k = 0; k < data['colors'].length; k++) {
         paletteEntries[k].value = data['colors'][k];
     }
 
-    tiles.length = 0;
-    document.getElementById('tile-entries').innerHTML = '';
     for (let k = 0; k < data['tiles'].length; k++) {
         loadTile(data['tiles'][k]);
     }
@@ -61,7 +86,7 @@ function parseData(data) {
     }
 
     for (let y = 0; y < data.background.length; y++) {
-        for (let x = 0; x < BG_WIDTH_TILES; x++) {
+        for (let x = 0; x < data.background[y].length; x++) {
             background[y][x] = data.background[y][x];
         }
     }
@@ -109,6 +134,7 @@ function savePalettes() {
         colors,
         tiles: outTiles,
         background,
+        tileSize,
     };
     console.log(JSON.stringify(out));
 
@@ -170,7 +196,6 @@ function deleteTile() {
             }
         }
     }
-    const overlay = document.getElementById('background-overlay');
     overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
 
     redrawBackground();
@@ -229,9 +254,9 @@ function openTileEditor(tile) {
     }
     editedTile = tile;
 
-    for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < 16; x++) {
-            pixels[y][x].setAttribute('data-palette-index', tile.data[y * 16 + x].toString());
+    for (let y = 0; y < tileSize; y++) {
+        for (let x = 0; x < tileSize; x++) {
+            pixels[y][x].setAttribute('data-palette-index', tile.data[y * tileSize + x].toString());
         }
     }
 
@@ -241,7 +266,7 @@ function openTileEditor(tile) {
 }
 
 function createTile() {
-    const indices = new Array(256).fill(0);
+    const indices = new Array(tileSize * tileSize).fill(0);
     const canvas = document.createElement('canvas');
     const tile = {
         data: indices,
@@ -250,10 +275,10 @@ function createTile() {
     };
 
     canvas.className = 'tile';
-    canvas.width = 16;
-    canvas.height = 16;
-    canvas.style.width = '64px';
-    canvas.style.height = '64px';
+    canvas.width = tileSize;
+    canvas.height = tileSize;
+    canvas.style.width = `${4 * tileSize}px`;
+    canvas.style.height = `${4 * tileSize}px`;
     canvas.style.backgroundColor = 'white';
     canvas.onclick = function(evt) {
         if (evt.shiftKey) {
@@ -290,10 +315,10 @@ function closeTileEditor() {
     editorOverlay.style.display = 'none';
 
     // copy from pixel editor to tile data
-    for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < 16; x++) {
+    for (let y = 0; y < tileSize; y++) {
+        for (let x = 0; x < tileSize; x++) {
             const colorIndex = parseInt(pixels[y][x].getAttribute('data-palette-index'));
-            editedTile.data[y * 16 + x] = colorIndex;
+            editedTile.data[y * tileSize + x] = colorIndex;
         }
     }
 
@@ -316,13 +341,13 @@ function loadTile(data) {
 
 function redrawTile(tile) {
     const ctx = tile.canvas.getContext("2d");
-    const image = ctx.createImageData(16, 16);
+    const image = ctx.createImageData(tileSize, tileSize);
     const basePaletteIndex = tile.palette * 16;
 
-    for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < 16; x++) {
-            const index = 4 * (y * 16 + x);
-            const colorIndex = parseInt(tile.data[y * 16 + x]);
+    for (let y = 0; y < tileSize; y++) {
+        for (let x = 0; x < tileSize; x++) {
+            const index = 4 * (y * tileSize + x);
+            const colorIndex = parseInt(tile.data[y * tileSize + x]);
             if (colorIndex != 0) {
                 const color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
 
@@ -347,17 +372,16 @@ function redrawBackground() {
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
             if (background[y][x] === -1) {
-                bgContext.clearRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                bgContext.clearRect(x * tileSize, y * tileSize, tileSize, tileSize)
             } else { 
                 const tile = tiles[background[y][x]];
-                bgContext.drawImage(tile.canvas, x * TILE_SIZE, y * TILE_SIZE);
+                bgContext.drawImage(tile.canvas, x * tileSize, y * tileSize);
             }
         }
     }
 }
 
 function updateOverlay(tile) {
-    const overlay = document.getElementById('background-overlay');
     const ctx = overlay.getContext("2d");
 
     ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -389,8 +413,8 @@ function copyEditorPaletteToGlobal(index) {
 
 // copies data from the custom attribute to the styles
 function redrawPixels() {
-    for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < 16; x++) {
+    for (let y = 0; y < tileSize; y++) {
+        for (let x = 0; x < tileSize; x++) {
             const colorIndex = pixels[y][x].getAttribute('data-palette-index');
             if (colorIndex == 0) {
                 pixels[y][x].style.backgroundImage = 'url("transparent.png")';
@@ -441,21 +465,39 @@ function importPalette() {
 }
 
 function initializePalettes() {
-    for (let pn = 0; pn < 8; pn++) {
-        const palette = makePalette(pn);
-        document.getElementById('palettes').appendChild(palette);
-    }
+    const paletteContainer = document.getElementById('palettes');
+    const editorPaletteContainer = document.getElementById('editor-palette-area');
 
-    const editorPalette = makePalette(null, true);
-    document.getElementById('editor-palette-area').appendChild(editorPalette);
+    if (paletteContainer.childNodes.length) {
+        // palettes are unique in that the elements are kept - 
+        // tiles, bg, and editor pixels get recreated
+        paletteEntries.forEach(el => el.value = '#000000');
+        editorPaletteEntries.forEach(el => el.value = '#000000');
+    } else {
+        for (let pn = 0; pn < 8; pn++) {
+            const palette = makePalette(pn);
+            paletteContainer.appendChild(palette);
+        }
+    
+        const editorPalette = makePalette(null, true);
+        editorPaletteContainer.appendChild(editorPalette);
+    }
+}
+
+function initializeTiles() {
+    tiles.length = 0;
+    document.getElementById('tile-entries').innerHTML = '';
 }
 
 function initializePixels() {
-    for (let y = 0; y < 16; y++) {
+    const pixelsContainer = document.getElementById('pixels-container');
+    pixelsContainer.innerHTML = '';
+    pixels.length = 0;
+    for (let y = 0; y < tileSize; y++) {
         pixels[y] = [];
         const row = document.createElement('div');
         row.className = 'pixel-row';
-        for (let x = 0; x < 16; x++) {
+        for (let x = 0; x < tileSize; x++) {
             const pix = document.createElement('div');
             pix.className = 'pixel';
             pix.style.backgroundImage = 'url("transparent.png")';
@@ -476,11 +518,22 @@ function initializePixels() {
             row.appendChild(pix);
         }
     
-        document.getElementById('pixels-container').appendChild(row);
+        pixelsContainer.appendChild(row);
     }
 }
 
 function initializeBackground() {
+    bgCanvas.width = tileSize * BG_WIDTH_TILES;
+    bgCanvas.height = tileSize * BG_HEIGHT_TILES;
+    bgCanvas.style.width = `${tileSize * BG_WIDTH_TILES * BG_SCALE_FACTOR}px`;
+    bgCanvas.style.height = `${tileSize * BG_HEIGHT_TILES * BG_SCALE_FACTOR}px`;
+
+    overlay.width = tileSize;
+    overlay.height = tileSize;
+    overlay.style.width = `${tileSize * BG_SCALE_FACTOR}px`;
+    overlay.style.height = `${tileSize * BG_SCALE_FACTOR}px`;
+
+    background.length = 0;
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         background[y] = new Array(BG_WIDTH_TILES).fill(-1);
     }
@@ -512,13 +565,12 @@ function addEventHandlers() {
         e.stopPropagation();
     }
 
-    const bgCanvas = document.getElementById('background-canvas');
     bgCanvas.onmousemove = function(e) {
-        const overlay = document.getElementById('background-overlay');
-        const x = Math.floor(e.offsetX / 32);
-        const y = Math.floor(e.offsetY / 32);
-        overlay.style.left = `${x * 32}px`;
-        overlay.style.top = `${y * 32}px`;
+        const scale = BG_SCALE_FACTOR * tileSize;
+        const x = Math.floor(e.offsetX / scale);
+        const y = Math.floor(e.offsetY / scale);
+        overlay.style.left = `${x * scale}px`;
+        overlay.style.top = `${y * scale}px`;
 
         if (background[y][x] !== -1) {
             highlightTile(tiles[background[y][x]]);
@@ -532,18 +584,37 @@ function addEventHandlers() {
     }
 
     bgCanvas.onclick = function(e) {
-        const x = Math.floor(e.offsetX / 32);
-        const y = Math.floor(e.offsetY / 32);
+        const x = Math.floor(e.offsetX / (BG_SCALE_FACTOR * tileSize));
+        const y = Math.floor(e.offsetY / (BG_SCALE_FACTOR * tileSize));
 
         placeTile(x, y, e.shiftKey);
     }
+
+    document.getElementById('tile-size-8').onclick = () => {
+        tileSize = 8;
+        initialize();
+    };
+
+    document.getElementById('tile-size-16').onclick = () => {
+        tileSize = 16;
+        initialize();
+    };
     
     window.onbeforeunload = function() {
         return true;
-    };    
+    };
 }
 
-initializePalettes();
-initializePixels();
-initializeBackground();
+function initialize() {
+    if (!isDocumentEmpty() && !confirm('Any unsaved changes will be lost, continue?')) {
+        return;
+    }
+    document.getElementById('project-name').value = '';
+    initializePalettes();
+    initializeTiles();
+    initializePixels();
+    initializeBackground();
+}
+
+initialize();
 addEventHandlers();

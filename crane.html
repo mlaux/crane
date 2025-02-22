@@ -31,7 +31,7 @@
             <fieldset id="background-editor">
                 <legend>Background</legend>
                 <div id="background-container">
-                    <canvas width="256" height="256" id="background-canvas"></canvas>
+                    <canvas width="512" height="512" id="background-canvas"></canvas>
                     <canvas width="16" height="16" id="background-overlay"></div>
                 </div>
             </fieldset>
@@ -46,9 +46,8 @@
                     </div>
                     <button id="zoom-out">Zoom out</button>
                     <button id="zoom-in">Zoom in</button>
-                    <div id="editor-palette-area">
-                        <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
-                    </div>
+                    <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
+                    <div id="editor-palette-area"></div>
                 </div>
             </div>
         </main>
@@ -57,6 +56,11 @@
             <input placeholder="Project name" id="project-name">
             <button onclick="savePalettes()">Save</button>
             <button onclick="loadPalettes()">Load</button>
+        </p>
+        <p>
+            Tile size
+            <input type="radio" id="tile-size-8" name="tile-size">8px
+            <input type="radio" id="tile-size-16" name="tile-size" checked>16px
         </p>
 
         <h1>Help</h1>
