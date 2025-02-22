@@ -21,7 +21,8 @@ const editorOverlay = document.getElementById('tile-editor-overlay');
 const editor = document.getElementById('tile-editor');
 const editorPaletteSelector = document.getElementById('editor-palette-selector');
 
-let tileSize = 16;
+const DEFAULT_TILE_SIZE = 16;
+let tileSize;
 
 function isDocumentEmpty() {
     return !tiles.length 
@@ -56,18 +57,19 @@ function parseData(data) {
     // TODO fix this, should have the DOM value be the only tile size.
     // should not have 2 variables to keep in sync (radio button checked and
     // tileSize int)
-    tileSize = data['tileSize'];
-    if (!tileSize) {
-        tileSize = 16;
+    let size = data['tileSize'];
+    if (!size) {
+        size = DEFAULT_TILE_SIZE;
     }
-    initialize();
+    initialize(size);
 
-    if (tileSize === 16) {
+    if (size === 16) {
         document.getElementById('tile-size-16').checked = true;
-    } else if (tileSize === 8) {
+    } else if (size === 8) {
         document.getElementById('tile-size-8').checked = true;
     } else {
-        // todo
+        alert('Invalid tile size - must be 8 or 16');
+        return;
     }
 
     document.getElementById('project-name').value = data['name'];
@@ -591,13 +593,11 @@ function addEventHandlers() {
     }
 
     document.getElementById('tile-size-8').onclick = () => {
-        tileSize = 8;
-        initialize();
+        initialize(8);
     };
 
     document.getElementById('tile-size-16').onclick = () => {
-        tileSize = 16;
-        initialize();
+        initialize(16);
     };
     
     window.onbeforeunload = function() {
@@ -605,10 +605,11 @@ function addEventHandlers() {
     };
 }
 
-function initialize() {
+function initialize(size) {
     if (!isDocumentEmpty() && !confirm('Any unsaved changes will be lost, continue?')) {
         return;
     }
+    tileSize = size;
     document.getElementById('project-name').value = '';
     initializePalettes();
     initializeTiles();
@@ -616,5 +617,5 @@ function initialize() {
     initializeBackground();
 }
 
-initialize();
+initialize(DEFAULT_TILE_SIZE);
 addEventHandlers();
