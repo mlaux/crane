@@ -115,13 +115,14 @@ function loadPalettes() {
     input.click();
 }
 
+function getProjectName() {
+    return document.getElementById('project-name').value || "Untitled";
+}
+
 function savePalettes() {
     const colors = [];
     const outTiles = [];
-    let name = document.getElementById('project-name').value;
-    if (!name) {
-        name = "Untitled";
-    }
+    const name = getProjectName();
     for (let k = 0; k < paletteEntries.length; k++) {
         colors[k] = paletteEntries[k].value;
     }
@@ -148,6 +149,18 @@ function savePalettes() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+function exportPng() {
+    const a = document.createElement("a");
+    a.setAttribute('download', `${getProjectName()}.png`);
+    bgCanvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        a.setAttribute('href', url);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
 }
 
 function selectPaletteEntry(entry) {

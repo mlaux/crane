@@ -30,12 +30,16 @@ function convertPalettes(colors) {
     return palettes.slice(0, palettes.findLastIndex(palette => !palette.every(color => color === 0)) + 1);
 }
 
-function makeSubtiles(tile) {
-    let pixels = [];
-    for (let k = 0; k < tile.data.length; k += PIXELS_PER_ROW) {
-        pixels.push(tile.data.slice(k, k + PIXELS_PER_ROW));
+function make2d(tile, size) {
+    const pixels = [];
+    for (let k = 0; k < tile.data.length; k += size) {
+        pixels.push(tile.data.slice(k, k + size));
     }
+    return pixels;
+}
 
+function makeSubtiles(tile) {
+    const pixels = make2d(tile, 16);
     let top = pixels.slice(0, 8);
     let bottom = pixels.slice(8, 16);
 
@@ -65,6 +69,40 @@ function convert(tile) {
     return out;
 }
 
+function write8(tiles, out) {
+    let outIndex = 0;
+    tiles.forEach(tile => {
+        let data = convert(make2d(tile, 8));
+        for (let k = 0; k < data.length; k++) {
+            out[outIndex++] = data[k];
+        }
+    });
+}
+
+function write16(tiles, out) {
+    let outIndex = 0;
+    tiles.forEach(tile => {
+        let subtiles = makeSubtiles(tile);
+        let topLeft = convert(subtiles.topLeft);
+        let topRight = convert(subtiles.topRight);
+        let bottomLeft = convert(subtiles.bottomLeft);
+        let bottomRight = convert(subtiles.bottomRight);
+        for (let k = 0; k < topLeft.length; k++) {
+            out[outIndex] = topLeft[k];
+            out[outIndex + 32] = topRight[k];
+            out[outIndex + 0x200] = bottomLeft[k];
+            out[outIndex + 0x200 + 32] = bottomRight[k];
+
+            outIndex++;
+        }
+
+        outIndex += 32;
+        if (outIndex % 0x200 == 0) {
+            outIndex += 0x200;
+        }
+    });
+}
+
 if (process.argv.length < 3) {
     console.log('no input specified');
     process.exit(1);
@@ -72,6 +110,8 @@ if (process.argv.length < 3) {
 
 const inData = readJsonFile(process.argv[2]);
 const outName = inData.name.replace(/\s/g, '-');
+const tileSize = inData.tileSize || 16;
+const paletteOffset = parseInt(process.argv[3]) || 0;
 
 const palettes = convertPalettes(inData.colors);
 const paletteDataLen = 2 * COLORS_PER_PALETTE * palettes.length;
@@ -86,32 +126,54 @@ for (let p = 0; p < palettes.length; p++) {
 fs.writeFileSync(`${outName}.pal`, Buffer.from(paletteDataBuf));
 console.log(`Wrote ${palettes.length} palettes to ${outName}.pal`);
 
-// round up size to nearest multiple of 1024 to ensure space for bottom row
-const tileDataLen = Math.ceil((32 * 4 * inData.tiles.length) / 0x400) * 0x400;
+let tileDataLen = 32 * inData.tiles.length;
+if (tileSize === 16) {
+    // round up size to nearest multiple of 1024 to ensure space for bottom row
+    tileDataLen = Math.ceil((32 * 4 * inData.tiles.length) / 0x400) * 0x400;
+}
 const tileDataBuf = new ArrayBuffer(tileDataLen);
 const tileDataBytes = new Uint8Array(tileDataBuf);
 
-let outIndex = 0;
-inData.tiles.forEach(tile => {
-    let subtiles = makeSubtiles(tile);
-    let topLeft = convert(subtiles.topLeft);
-    let topRight = convert(subtiles.topRight);
-    let bottomLeft = convert(subtiles.bottomLeft);
-    let bottomRight = convert(subtiles.bottomRight);
-    for (let k = 0; k < topLeft.length; k++) {
-        tileDataBytes[outIndex] = topLeft[k];
-        tileDataBytes[outIndex + 32] = topRight[k];
-        tileDataBytes[outIndex + 0x200] = bottomLeft[k];
-        tileDataBytes[outIndex + 0x200 + 32] = bottomRight[k];
-
-        outIndex++;
-    }
-
-    outIndex += 32;
-    if (outIndex % 0x200 == 0) {
-        outIndex += 0x200;
-    }
-});
+if (tileSize === 16) {
+    write16(inData.tiles, tileDataBytes);
+} else {
+    write8(inData.tiles, tileDataBytes);
+}
 
 fs.writeFileSync(`${outName}.4bp`, Buffer.from(tileDataBuf));
 console.log(`Wrote ${inData.tiles.length} tiles to ${outName}.4bp`);
+
+const tilemapDataLen = 2048;
+const tilemapDataBuf = new ArrayBuffer(tilemapDataLen);
+const tilemapDataShorts = new Uint16Array(tilemapDataBuf);
+
+// some files can have 16x16 backgrounds
+if (inData.background.length < 32) {
+    const newRows = new Array(32 - inData.background.length).fill()
+            .map(_ => []);
+    inData.background = inData.background.concat(newRows);
+}
+
+outIndex = 0;
+for (let y = 0; y < 32; y++) {
+    if (inData.background[y].length < 32) {
+        inData.background[y] = inData.background[y].concat(
+                new Array(32 - inData.background[y].length).fill(0));
+    }
+    for (let x = 0; x < 32; x++) {
+        let tileNum = inData.background[y][x];
+        if (tileNum === -1) {
+            tileNum = 0;
+        }
+        let useTileNum = tileNum;
+        if (tileSize === 16) {
+            useTileNum = 2 * (tileNum % 8) + 32 * Math.floor(tileNum / 8);
+        }
+        const paletteNum = inData.tiles[tileNum].palette + paletteOffset;
+
+        tilemapDataShorts[outIndex++] = paletteNum << 10 | useTileNum;
+    }
+}
+
+fs.writeFileSync(`${outName}.map`, Buffer.from(tilemapDataBuf));
+console.log(`Wrote background to ${outName}.map`);
