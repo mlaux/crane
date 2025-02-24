@@ -1,19 +1,30 @@
+// DOM elements of the pixels in the tile editor
 const pixels = [];
+// <input type=color>s for the main palette section
 const paletteEntries = [];
+// <input type=color>s for the tile editor
 const editorPaletteEntries = [];
 
+// list of tiles in the tile library
 const tiles = [];
 let editedTile = null;
 let selectedTileIndex = -1;
 
+// 2d array of indices into the tiles array
 const background = [];
 
+// for tile editor. TODO allow zooming the BG as well
 const ZOOMS = [8, 16, 32];
 let zoomIndex = 1;
 
+const COLORS_PER_PALETTE = 16;
+
 const BG_WIDTH_TILES = 32;
 const BG_HEIGHT_TILES = 32;
+
+// TODO configurable
 const BG_SCALE_FACTOR = 2;
+
 const bgCanvas = document.getElementById('background-canvas');
 const overlay = document.getElementById('background-overlay');
 
@@ -24,6 +35,7 @@ const editorPaletteSelector = document.getElementById('editor-palette-selector')
 const DEFAULT_TILE_SIZE = 16;
 let tileSize;
 
+// empty means no tiles, all blank background, all black palettes
 function isDocumentEmpty() {
     return !tiles.length 
             && !background.some(row => row.some(el => el != -1))
@@ -116,7 +128,7 @@ function loadPalettes() {
 }
 
 function getProjectName() {
-    return document.getElementById('project-name').value || "Untitled";
+    return document.getElementById('project-name').value || 'Untitled';
 }
 
 function savePalettes() {
@@ -141,7 +153,7 @@ function savePalettes() {
     };
     console.log(JSON.stringify(out));
 
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], {
         type: 'text/plain'
     }));
@@ -152,7 +164,7 @@ function savePalettes() {
 }
 
 function exportPng() {
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.setAttribute('download', `${getProjectName()}.png`);
     bgCanvas.toBlob(blob => {
         const url = URL.createObjectURL(blob);
@@ -161,6 +173,78 @@ function exportPng() {
         a.click();
         document.body.removeChild(a);
     });
+}
+
+function exportArrayBuffer(buf, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+    a.setAttribute('download', name);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function exportPalettes() {
+    const palettes = convertPalettes();
+    const paletteDataLen = 2 * COLORS_PER_PALETTE * palettes.length;
+    const paletteDataBuf = new ArrayBuffer(paletteDataLen);
+    const paletteDataShorts = new Uint16Array(paletteDataBuf);
+    for (let p = 0; p < palettes.length; p++) {
+        for (let k = 0; k < COLORS_PER_PALETTE; k++) {
+            paletteDataShorts[p * COLORS_PER_PALETTE + k] = palettes[p][k];
+        }
+    }
+    exportArrayBuffer(paletteDataBuf, `${getProjectName()}.pal`);
+}
+
+function exportTiles() {
+    let tileDataLen = 32 * tiles.length;
+    if (tileSize === 16) {
+        // round up size to nearest multiple of 1024 to ensure space for bottom row
+        tileDataLen = Math.ceil((32 * 4 * tiles.length) / 0x400) * 0x400;
+    }
+    const tileDataBuf = new ArrayBuffer(tileDataLen);
+    const tileDataBytes = new Uint8Array(tileDataBuf);
+
+    if (tileSize === 16) {
+        write16(tiles, tileDataBytes);
+    } else {
+        write8(tiles, tileDataBytes);
+    }
+
+    exportArrayBuffer(tileDataBuf, `${getProjectName()}.4bp`);
+}
+
+function exportBackground() {
+    if (tiles.length === 0) {
+        alert('No tiles');
+        return;
+    }
+
+    const tilemapDataLen = 2048;
+    const tilemapDataBuf = new ArrayBuffer(tilemapDataLen);
+    const tilemapDataShorts = new Uint16Array(tilemapDataBuf);
+    const paletteOffset = parseInt(document.getElementById('palette-index-offset').value);
+
+    let outIndex = 0;
+    for (let y = 0; y < BG_HEIGHT_TILES; y++) {
+        for (let x = 0; x < BG_WIDTH_TILES; x++) {
+            let tileNum = background[y][x];
+            if (tileNum === -1) {
+                tileNum = 0; // TODO
+            }
+
+            let useTileNum = tileNum;
+            if (tileSize === 16) {
+                useTileNum = 2 * (tileNum % 8) + 32 * Math.floor(tileNum / 8);
+            }
+            const paletteNum = tiles[tileNum].palette + paletteOffset;
+    
+            tilemapDataShorts[outIndex++] = paletteNum << 10 | useTileNum;
+        }
+    }
+
+    exportArrayBuffer(tilemapDataBuf, `${getProjectName()}.map`);
 }
 
 function selectPaletteEntry(entry) {
@@ -281,6 +365,7 @@ function openTileEditor(tile) {
 }
 
 function createTile() {
+    // this is 1d and the background is 2d... why
     const indices = new Array(tileSize * tileSize).fill(0);
     const canvas = document.createElement('canvas');
     const tile = {
@@ -355,7 +440,7 @@ function loadTile(data) {
 }
 
 function redrawTile(tile) {
-    const ctx = tile.canvas.getContext("2d");
+    const ctx = tile.canvas.getContext('2d');
     const image = ctx.createImageData(tileSize, tileSize);
     const basePaletteIndex = tile.palette * 16;
 
@@ -396,7 +481,7 @@ function redrawBackground() {
 }
 
 function updateOverlay(tile) {
-    const ctx = overlay.getContext("2d");
+    const ctx = overlay.getContext('2d');
 
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     ctx.drawImage(tile.canvas, 0, 0);
@@ -464,7 +549,7 @@ function importPalette() {
         const obj = await response.json();
 
         const baseIndex = where * 16 + 1; // +1 to skip transparent
-        for (let k = 0; k < obj.colors.length; k++) {
+        for (let k = 0; k < obj.colors.length && k < 15; k++) {
             paletteEntries[baseIndex + k].value = `#${obj.colors[k]}`;
         }
 
@@ -476,6 +561,100 @@ function importPalette() {
             updateOverlay(tiles[selectedTileIndex]);
         }
     })();
+}
+
+function convertPalettes() {
+    const colors = paletteEntries.map(entry => entry.value);
+    const palettes = [];
+    for (let k = 0; k < colors.length; k += COLORS_PER_PALETTE) {
+        palettes.push(colors.slice(k, k + COLORS_PER_PALETTE).map(col => {
+            const val = parseInt(col.substring(1), 16);
+            
+            let r = val >> 19 & 0x1f;
+            let g = val >> 11 & 0x1f;
+            let b = val >> 3 & 0x1f;
+
+            let packed = (b << 10) | (g << 5) | r;
+
+            return packed;
+        }));
+    }
+
+    // filter out all-zero palettes at the end. inner zero palettes are ok
+    return palettes.slice(0, palettes.findLastIndex(palette => !palette.every(color => color === 0)) + 1);
+}
+
+function make2d(tile, size) {
+    const pixels = [];
+    for (let k = 0; k < tile.data.length; k += size) {
+        pixels.push(tile.data.slice(k, k + size));
+    }
+    return pixels;
+}
+
+function makeSubtiles(tile) {
+    const pixels = make2d(tile, 16);
+    let top = pixels.slice(0, 8);
+    let bottom = pixels.slice(8, 16);
+
+    let topLeft = top.map(row => row.slice(0, 8));
+    let topRight = top.map(row => row.slice(8, 16));
+    let bottomLeft = bottom.map(row => row.slice(0, 8));
+    let bottomRight = bottom.map(row => row.slice(8, 16));
+    return { topLeft, topRight, bottomLeft, bottomRight };
+}
+
+function convert(tile) {
+    const bit0 = tile.map(row => row.map(pix => pix & 1).join('')).map(str => parseInt(str, 2));
+    const bit1 = tile.map(row => row.map(pix => pix >> 1 & 1).join('')).map(str => parseInt(str, 2));
+    const bit2 = tile.map(row => row.map(pix => pix >> 2 & 1).join('')).map(str => parseInt(str, 2));
+    const bit3 = tile.map(row => row.map(pix => pix >> 3 & 1).join('')).map(str => parseInt(str, 2));
+
+    const out = [];
+    for (let k = 0; k < bit0.length; k++) {
+        out.push(bit0[k]);
+        out.push(bit1[k]);
+    }
+    for (let k = 0; k < bit0.length; k++) {
+        out.push(bit2[k]);
+        out.push(bit3[k]);
+    }
+
+    return out;
+}
+
+function write8(tiles, out) {
+    let outIndex = 0;
+    tiles.forEach(tile => {
+        let data = convert(make2d(tile, 8));
+        for (let k = 0; k < data.length; k++) {
+            out[outIndex++] = data[k];
+        }
+    });
+}
+
+function write16(tiles, out) {
+    let outIndex = 0;
+    tiles.forEach(tile => {
+        let subtiles = makeSubtiles(tile);
+        let topLeft = convert(subtiles.topLeft);
+        let topRight = convert(subtiles.topRight);
+        let bottomLeft = convert(subtiles.bottomLeft);
+        let bottomRight = convert(subtiles.bottomRight);
+        for (let k = 0; k < topLeft.length; k++) {
+            out[outIndex] = topLeft[k];
+            out[outIndex + 32] = topRight[k];
+            out[outIndex + 0x200] = bottomLeft[k];
+            out[outIndex + 0x200 + 32] = bottomRight[k];
+
+            outIndex++;
+        }
+
+        outIndex += 32;
+        if (outIndex % 0x200 == 0) {
+            outIndex += 0x200;
+        }
+    });
 }
 
 function initializePalettes() {

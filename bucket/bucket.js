@@ -2,8 +2,6 @@ const fs = require('fs');
 const process = require('process');
 
 const COLORS_PER_PALETTE = 16;
-const PIXELS_PER_ROW = 16;
-const ROWS_PER_TILE = 16;
 
 const readJsonFile = filePath => {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -21,7 +19,6 @@ function convertPalettes(colors) {
 
             let packed = (b << 10) | (g << 5) | r;
 
-            // console.log(r, g, b, packed.toString(16));
             return packed;
         }));
     }

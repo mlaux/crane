@@ -13,6 +13,8 @@ header {
 
 main {
     display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 a {
@@ -21,7 +23,16 @@ a {
 
 #tile-library {
     flex: 1;
-    margin-right: 20px;
+}
+
+#bottom-options-container {
+    display: flex;
+    gap: 16px;
+}
+
+.bottom-options-panel {
+    /* min-width: 300px; */
+    flex: 1;
 }
 
 fieldset {
