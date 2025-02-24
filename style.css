@@ -24,10 +24,6 @@ a {
     margin-right: 20px;
 }
 
-#background-editor {
-    /* flex: 1; */
-}
-
 fieldset {
     border-radius: 8px;
     border: 1px solid #e0e0e0;
@@ -132,7 +128,7 @@ canvas {
     display: inline-block;
     position: relative;
     width: 512px;
-    height: 512px;
+    height: 448px;
     overflow: scroll;
 }
 
