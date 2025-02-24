@@ -386,9 +386,8 @@ function redrawBackground() {
 
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
-            if (background[y][x] === -1) {
-                bgContext.clearRect(x * tileSize, y * tileSize, tileSize, tileSize)
-            } else { 
+            bgContext.clearRect(x * tileSize, y * tileSize, tileSize, tileSize)
+            if (background[y][x] !== -1) {
                 const tile = tiles[background[y][x]];
                 bgContext.drawImage(tile.canvas, x * tileSize, y * tileSize);
             }
