@@ -702,7 +702,9 @@ function initializePixels() {
                 redrawPixels();
             };
             pix.onmousemove = function(evt) {
+                console.log('onmousemove');
                 if (evt.buttons) {
+                    console.log('buttons: ', pix, evt.shiftKey);
                     placePixel(pix, evt.shiftKey);
                     redrawPixels();
                 }
