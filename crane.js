@@ -710,7 +710,7 @@ function initializePixels() {
                 let useY = Math.floor((evt.clientY - bounds.top) / 16);
                 const curPix = pixels[useY][useX];
 
-                if (evt.buttons || evt.pointerType === 'pen' || evt.pointerType === 'touch') {
+                if (evt.buttons) {
                     placePixel(curPix, evt.shiftKey);
                     redrawPixels();
                 }
