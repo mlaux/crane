@@ -708,6 +708,10 @@ function initializePixels() {
                 let bounds = pixelsContainer.getBoundingClientRect();
                 let useX = Math.floor((evt.clientX - bounds.left) / 16);
                 let useY = Math.floor((evt.clientY - bounds.top) / 16);
+                if (useX >= tileSize || useY >= tileSize) {
+                    return;
+                }
+
                 const curPix = pixels[useY][useX];
 
                 if (evt.buttons) {
