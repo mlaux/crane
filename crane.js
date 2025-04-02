@@ -151,7 +151,6 @@ function savePalettes() {
         background,
         tileSize,
     };
-    console.log(JSON.stringify(out));
 
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], {
@@ -704,7 +703,6 @@ function initializePixels() {
             pix.onmousemove = function(evt) {
                 console.log('onmousemove');
                 if (evt.buttons) {
-                    console.log('buttons: ', pix, evt.shiftKey);
                     placePixel(pix, evt.shiftKey);
                     redrawPixels();
                 }
@@ -792,6 +790,14 @@ function addEventHandlers() {
     document.getElementById('tile-size-16').onclick = () => {
         initialize(16);
     };
+
+    // document.body.onpointerdown = evt => {
+    //     if (evt.pointerType === 'pen') {
+    //         console.log('is pen');
+    //     }
+    // };
+
+    document.body.onscroll = e => e.preventDefault();
     
     window.onbeforeunload = function() {
         return true;

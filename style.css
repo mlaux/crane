@@ -3,7 +3,7 @@ body {
     max-width: 1200px;
     font-family: sans-serif;
     background-color: #535353;
-    color: #e0e0e0
+    color: #e0e0e0;
 }
 
 header {
@@ -56,6 +56,7 @@ fieldset {
     height: 16px;
     -webkit-user-select: none;
     user-select: none;
+    touch-action: none;
     border-right: 1px solid red;
     border-bottom: 1px solid red;
 }
