@@ -50,6 +50,7 @@ fieldset {
 }
 
 .pixel {
+    box-sizing: border-box;
     cursor: default;
     display: inline-block;
     width: 16px;

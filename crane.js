@@ -696,16 +696,27 @@ function initializePixels() {
             pix.style.backgroundRepeat = 'repeat';
             pix.setAttribute('data-palette-index', '0');
     
-            pix.onmousedown = function(evt) {
+            pix.onpointerdown = function(evt) {
                 placePixel(pix, evt.shiftKey);
                 redrawPixels();
             };
-            pix.onmousemove = function(evt) {
-                console.log('onmousemove');
-                if (evt.buttons) {
-                    placePixel(pix, evt.shiftKey);
+            pix.onpointermove = function(evt) {
+                // need to look up the pixel every time. for touch/pen events,
+                // the initially touched pixel serves as the reference for the move
+                // events too
+                // THIS DEPENDS ON box-sizing: border-box on the main container
+                let bounds = pixelsContainer.getBoundingClientRect();
+                let useX = Math.floor((evt.clientX - bounds.left) / 16);
+                let useY = Math.floor((evt.clientY - bounds.top) / 16);
+                const curPix = pixels[useY][useX];
+
+                if (evt.buttons || evt.pointerType === 'pen' || evt.pointerType === 'touch') {
+                    placePixel(curPix, evt.shiftKey);
                     redrawPixels();
                 }
+            }
+            pix.onscroll = function(evt) {
+                evt.preventDefault();
             }
             pixels[y].push(pix);
             row.appendChild(pix);
@@ -791,11 +802,12 @@ function addEventHandlers() {
         initialize(16);
     };
 
-    // document.body.onpointerdown = evt => {
-    //     if (evt.pointerType === 'pen') {
-    //         console.log('is pen');
-    //     }
-    // };
+    document.body.onpointerdown = evt => {
+        //console.log(evt.pointerType);
+        // if (evt.pointerType === 'pen') {
+        //     console.log('is pen');
+        // }
+    };
 
     document.body.onscroll = e => e.preventDefault();
     
