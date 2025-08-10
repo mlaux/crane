@@ -34,6 +34,7 @@ const editorPaletteSelector = document.getElementById('editor-palette-selector')
 
 const DEFAULT_TILE_SIZE = 16;
 let tileSize;
+let gridVisible = true;
 
 // empty means no tiles, all blank background, all black palettes
 function isDocumentEmpty() {
@@ -63,6 +64,20 @@ function zoomOut() {
         zoomIndex--;
     }
     resizePixels();
+}
+
+function toggleGrid() {
+    gridVisible = !gridVisible;
+    const pixelsContainer = document.getElementById('pixels-container');
+    const toggleButton = document.getElementById('toggle-grid');
+    
+    if (gridVisible) {
+        pixelsContainer.classList.remove('no-grid');
+        toggleButton.textContent = 'Hide grid';
+    } else {
+        pixelsContainer.classList.add('no-grid');
+        toggleButton.textContent = 'Show grid';
+    }
 }
 
 function parseData(data) {
@@ -107,9 +122,10 @@ function parseData(data) {
     redrawBackground();
 }
 
-function loadPalettes() {
+function loadProject() {
     const input = document.createElement('input');
     input.type = 'file';
+    input.accept = '.json';
     document.body.appendChild(input);
 
     input.addEventListener('change', evt => { 
@@ -131,7 +147,7 @@ function getProjectName() {
     return document.getElementById('project-name').value || 'Untitled';
 }
 
-function savePalettes() {
+function saveProject() {
     const colors = [];
     const outTiles = [];
     const name = getProjectName();
@@ -197,18 +213,26 @@ function exportPalettes() {
 }
 
 function exportTiles() {
-    let tileDataLen = 32 * tiles.length;
+    // Add blank tile to tiles array for export
+    const blankTile = {
+        data: new Array(tileSize * tileSize).fill(0),
+        palette: 0,
+        canvas: null
+    };
+    const tilesWithBlank = [...tiles, blankTile];
+    
+    let tileDataLen = 32 * tilesWithBlank.length;
     if (tileSize === 16) {
         // round up size to nearest multiple of 1024 to ensure space for bottom row
-        tileDataLen = Math.ceil((32 * 4 * tiles.length) / 0x400) * 0x400;
+        tileDataLen = Math.ceil((32 * 4 * tilesWithBlank.length) / 0x400) * 0x400;
     }
     const tileDataBuf = new ArrayBuffer(tileDataLen);
     const tileDataBytes = new Uint8Array(tileDataBuf);
 
     if (tileSize === 16) {
-        write16(tiles, tileDataBytes);
+        write16(tilesWithBlank, tileDataBytes);
     } else {
-        write8(tiles, tileDataBytes);
+        write8(tilesWithBlank, tileDataBytes);
     }
 
     exportArrayBuffer(tileDataBuf, `${getProjectName()}.4bp`);
@@ -224,22 +248,29 @@ function exportBackground() {
     const tilemapDataBuf = new ArrayBuffer(tilemapDataLen);
     const tilemapDataShorts = new Uint16Array(tilemapDataBuf);
     const paletteOffset = parseInt(document.getElementById('palette-index-offset').value);
+    
+    // blank tile will be at index tiles.length after all real tiles
+    const blankTileIndex = tiles.length;
 
     let outIndex = 0;
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
             let tileNum = background[y][x];
             if (tileNum === -1) {
-                tileNum = 0; // TODO
+                tileNum = blankTileIndex;
             }
 
-            let useTileNum = tileNum;
-            if (tileSize === 16) {
-                useTileNum = 2 * (tileNum % 8) + 32 * Math.floor(tileNum / 8);
+            let paletteNum = 0; // Default palette for blank tile
+            if (tileNum !== -1) {
+                paletteNum = tiles[tileNum].palette + paletteOffset;
             }
-            const paletteNum = tiles[tileNum].palette + paletteOffset;
+
+            let tileNum8x8 = tileNum;
+            if (tileSize === 16) {
+                tileNum8x8 = 2 * (tileNum % 8) + 32 * Math.floor(tileNum / 8);
+            }
     
-            tilemapDataShorts[outIndex++] = paletteNum << 10 | useTileNum;
+            tilemapDataShorts[outIndex++] = paletteNum << 10 | tileNum8x8;
         }
     }
 
@@ -300,6 +331,25 @@ function deleteTile() {
     selectedTileIndex = -1;
 }
 
+function duplicateTile() {
+    if (selectedTileIndex === -1) {
+        return;
+    }
+
+    const originalTile = tiles[selectedTileIndex];
+    const duplicatedTile = createTile();
+    
+    // Copy the data and palette from the original tile
+    duplicatedTile.data = [...originalTile.data];
+    duplicatedTile.palette = originalTile.palette;
+    
+    // Redraw the duplicated tile to show the copied pixels
+    redrawTile(duplicatedTile);
+    
+    // Select the newly created duplicate
+    selectTile(duplicatedTile);
+}
+
 function makePalette(text, forTileEditor) {
     const row = document.createElement('div');
     row.classList.add('palette-row');
@@ -329,6 +379,7 @@ function makePalette(text, forTileEditor) {
             paletteEntries.push(entry);
         }
         if (x != 0) {
+            // skip element for transparent color index 0
             row.appendChild(entry);
         }
     }
@@ -526,6 +577,7 @@ function redrawPixels() {
     }
 }
 
+// import a palette from https://lospec.com/palette-list/${name}.json
 function importPalette() {
     const urlField = document.getElementById('palette-import-url');
     let url = urlField.value;
@@ -772,6 +824,11 @@ function addEventHandlers() {
         zoomOut();
         e.stopPropagation();
     }
+    
+    document.getElementById('toggle-grid').onclick = function(e) {
+        toggleGrid();
+        e.stopPropagation();
+    }
 
     bgCanvas.onmousemove = function(e) {
         const scale = BG_SCALE_FACTOR * tileSize;
@@ -806,18 +863,72 @@ function addEventHandlers() {
         initialize(16);
     };
 
-    document.body.onpointerdown = evt => {
-        //console.log(evt.pointerType);
-        // if (evt.pointerType === 'pen') {
-        //     console.log('is pen');
-        // }
-    };
-
     document.body.onscroll = e => e.preventDefault();
     
     window.onbeforeunload = function() {
         return true;
     };
+}
+
+function saveSinglePalette() {
+    const paletteIndex = parseInt(document.getElementById('palette-loadsave-index').value);
+    const colors = [];
+    const baseIndex = paletteIndex * COLORS_PER_PALETTE;
+    
+    for (let k = 0; k < COLORS_PER_PALETTE; k++) {
+        colors[k] = paletteEntries[baseIndex + k].value;
+    }
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(colors)], {
+        type: 'text/plain'
+    }));
+    a.setAttribute('download', `palette_${paletteIndex}.json`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function loadSinglePalette() {
+    const paletteIndex = parseInt(document.getElementById('palette-loadsave-index').value);
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', evt => { 
+        const file = evt.target.files[0]; 
+        const reader = new FileReader();
+        reader.readAsText(file, 'UTF-8');
+        reader.onload = readerEvent => {
+            try {
+                const colors = JSON.parse(readerEvent.target.result);
+                if (!Array.isArray(colors)) {
+                    alert('Invalid palette file: must be a JSON array of colors');
+                    return;
+                }
+
+                const baseIndex = paletteIndex * COLORS_PER_PALETTE;
+                for (let k = 0; k < COLORS_PER_PALETTE && k < colors.length; k++) {
+                    paletteEntries[baseIndex + k].value = colors[k];
+                }
+
+                redrawTiles();
+                redrawBackground();
+                if (selectedTileIndex !== -1) {
+                    updateOverlay(tiles[selectedTileIndex]);
+                }
+            } catch (e) {
+                alert('Invalid JSON file');
+            }
+        };
+        reader.onloadend = () => {
+            document.body.removeChild(input);
+        };
+    });
+
+    input.click();
 }
 
 function initialize(size) {

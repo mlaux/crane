@@ -10,11 +10,16 @@
             <fieldset id="palettes-container">
                 <legend>Palettes</legend>
                 <div id="palettes"></div>
-                <div>
+                <p>
+                    Index <input id="palette-loadsave-index" type="number" min="0" max="7" value="0">
+                    <button onclick="saveSinglePalette()">Save</button>
+                    <button onclick="loadSinglePalette()">Load</button>
+                </p>
+                <p>
                     Place <input placeholder="https://lospec.com/palette-list/&lt;something&gt;" id="palette-import-url">
                     in <input id="palette-import-index" type="number" min="0" max="7" value="0">
                     <button onclick="importPalette()">Import</button>
-                </div>
+                </p>
             </fieldset>
         </header>
         <main>
@@ -23,6 +28,7 @@
                 <div id="tile-library-top">
                     <button onclick="openTileEditor()">+</button>
                     <button onclick="deleteTile()">-</button>
+                    <button onclick="duplicateTile()">Duplicate</button>
                 </div>
                 <div id="tile-entries">
 
@@ -46,6 +52,7 @@
                     </div>
                     <button id="zoom-out">Zoom out</button>
                     <button id="zoom-in">Zoom in</button>
+                    <button id="toggle-grid">Hide grid</button>
                     <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
                     <div id="editor-palette-area"></div>
                 </div>
@@ -60,8 +67,8 @@
                     Name <input placeholder="Untitled" id="project-name">
                 </p>
                 <p>
-                    <button onclick="savePalettes()">Save</button>
-                    <button onclick="loadPalettes()">Load</button>
+                    <button onclick="saveProject()">Save</button>
+                    <button onclick="loadProject()">Load</button>
                 </p>
             </fieldset>
             <fieldset class="bottom-options-panel">

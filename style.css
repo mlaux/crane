@@ -77,6 +77,11 @@ fieldset {
     border-bottom: none;
 }
 
+#pixels-container.no-grid .pixel {
+    border-right: none;
+    border-bottom: none;
+}
+
 #tile-editor-overlay {
     position: absolute;
     top: 0;
