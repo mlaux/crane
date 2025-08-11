@@ -83,7 +83,7 @@ fieldset {
 }
 
 #tile-editor-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -117,15 +117,20 @@ fieldset {
 }
 
 .palette-entry {
-    border: 1px solid #282828;
-    background-color: #282828;
+    display: inline-block;
+    border: 1px solid black;
+    background-color: black;
     width: 32px;
     height: 32px;
-    margin: 0;
+    margin: 1px;
     padding: 0;
+    cursor: pointer;
+    vertical-align: middle;
+    user-select: none;
+    -webkit-user-select: none; /* Safari */
 }
 
-.palette-entry.palette-entry-selected {
+.palette-entry-selected {
     border: 1px solid red;
 }
 

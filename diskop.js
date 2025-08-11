@@ -21,8 +21,9 @@ function parseData(data) {
     document.getElementById('project-name').value = data['name'];
 
     for (let k = 0; k < data['colors'].length; k++) {
-        paletteEntries[k].value = data['colors'][k];
+        paletteColors[k] = data['colors'][k];
     }
+    updatePaletteUI();
 
     for (let k = 0; k < data['tiles'].length; k++) {
         loadTile(data['tiles'][k]);
@@ -73,8 +74,8 @@ function saveProject() {
     const colors = [];
     const outTiles = [];
     const name = getProjectName();
-    for (let k = 0; k < paletteEntries.length; k++) {
-        colors[k] = paletteEntries[k].value;
+    for (let k = 0; k < paletteColors.length; k++) {
+        colors[k] = paletteColors[k];
     }
     for (let k = 0; k < tiles.length; k++) {
         outTiles[k] = {
@@ -106,7 +107,7 @@ function saveSinglePalette() {
     const baseIndex = paletteIndex * COLORS_PER_PALETTE;
     
     for (let k = 0; k < COLORS_PER_PALETTE; k++) {
-        colors[k] = paletteEntries[baseIndex + k].value;
+        colors[k] = paletteColors[baseIndex + k];
     }
 
     const a = document.createElement('a');
@@ -141,8 +142,9 @@ function loadSinglePalette() {
 
                 const baseIndex = paletteIndex * COLORS_PER_PALETTE;
                 for (let k = 0; k < COLORS_PER_PALETTE && k < colors.length; k++) {
-                    paletteEntries[baseIndex + k].value = colors[k];
+                    paletteColors[baseIndex + k] = colors[k];
                 }
+                updatePaletteUI();
 
                 redrawTiles();
                 redrawBackground();

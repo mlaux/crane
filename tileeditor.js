@@ -40,8 +40,9 @@ function closeTileEditor() {
 function copyPaletteToEditor(index) {
     const base = index * 16;
     for (let k = 0; k < 16; k++) {
-        editorPaletteEntries[k].value = paletteEntries[base + k].value;
+        editorPaletteColors[k] = paletteColors[base + k];
     }
+    updatePaletteUI();
 }
 
 function selectPaletteEntry(entry) {
@@ -50,6 +51,7 @@ function selectPaletteEntry(entry) {
     }
     entry.classList.add('palette-entry-selected');
 }
+
 function placePixel(pix, remove) {
     if (remove) {
         pix.setAttribute('data-palette-index', '0');
@@ -109,7 +111,7 @@ function redrawPixels() {
                 pixels[y][x].style.backgroundImage = 'url("transparent.png")';
                 pixels[y][x].setAttribute('data-palette-index', '0');
             } else {
-                const color = editorPaletteEntries[colorIndex].value;
+                const color = editorPaletteColors[colorIndex];
                 pixels[y][x].style.backgroundImage = '';
                 pixels[y][x].style.backgroundColor = color;
             }

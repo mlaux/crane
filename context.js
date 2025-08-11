@@ -1,8 +1,10 @@
 // DOM elements of the pixels in the tile editor
 const pixels = [];
-// <input type=color>s for the main palette section
+// color values
+const paletteColors = [];
+const editorPaletteColors = [];
+// color preview elements
 const paletteEntries = [];
-// <input type=color>s for the tile editor
 const editorPaletteEntries = [];
 
 // list of tiles in the tile library

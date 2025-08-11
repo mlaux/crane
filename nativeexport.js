@@ -98,7 +98,7 @@ function exportPng() {
 }
 
 function convertPalettes() {
-    const colors = paletteEntries.map(entry => entry.value);
+    const colors = paletteColors;
     const palettes = [];
     for (let k = 0; k < colors.length; k += COLORS_PER_PALETTE) {
         palettes.push(colors.slice(k, k + COLORS_PER_PALETTE).map(col => {

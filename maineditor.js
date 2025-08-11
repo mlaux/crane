@@ -2,7 +2,7 @@
 function isDocumentEmpty() {
     return !tiles.length 
             && !background.some(row => row.some(el => el != -1))
-            && !paletteEntries.some(el => el.value != '#000000');
+            && !paletteColors.some(color => color != '#000000');
 }
 
 function createPalette(text, forTileEditor) {
@@ -13,24 +13,34 @@ function createPalette(text, forTileEditor) {
         row.innerText = text + ' ';
     }
     for (let x = 0; x < 16; x++) {
-        const entry = document.createElement('input');
-        entry.type = 'color';
-        entry.style.verticalAlign = 'middle';
+        const entry = document.createElement('div');
         entry.classList.add('palette-entry');
-        entry.className = 'palette-entry';
+        
         if (forTileEditor) {
             entry.classList.add('palette-entry-editor');
             entry.onclick = function(evt) {
-                if (!evt.shiftKey) {
-                    evt.preventDefault();
+                evt.preventDefault();
+                if (evt.shiftKey) {
+                    const colorIndex = editorPaletteEntries.indexOf(entry);
+                    showColorPicker(editorPaletteColors[colorIndex], (newColor) => {
+                        editorPaletteColors[colorIndex] = newColor;
+                        onTileEditorPaletteEntryChanged();
+                    });
+                } else {
                     selectPaletteEntry(entry);
                 }
             };
-            entry.onchange = onTileEditorPaletteEntryChanged;
             editorPaletteEntries.push(entry);
         } else {
             entry.classList.add('palette-entry-global');
-            entry.onchange = onGlobalPaletteEntryChanged;
+            entry.onclick = function(evt) {
+                const globalIndex = paletteEntries.indexOf(entry);
+
+                showColorPicker(paletteColors[globalIndex], (newColor) => {
+                    paletteColors[globalIndex] = newColor;
+                    onGlobalPaletteEntryChanged();
+                });
+            };
             paletteEntries.push(entry);
         }
         if (x != 0) {
@@ -39,6 +49,11 @@ function createPalette(text, forTileEditor) {
         }
     }
     return row;
+}
+
+function showColorPicker(currentColor, callback) {
+    const picker = getColorPicker();
+    picker.show(currentColor, callback);
 }
 
 function createTile() {
@@ -142,6 +157,7 @@ function duplicateTile() {
 }
 
 function onGlobalPaletteEntryChanged() {
+    updatePaletteUI();
     redrawTiles();
     redrawBackground();
 }
@@ -162,7 +178,7 @@ function redrawTile(tile) {
             const index = 4 * (y * tileSize + x);
             const colorIndex = parseInt(tile.data[y * tileSize + x]);
             if (colorIndex != 0) {
-                const color = parseInt(paletteEntries[basePaletteIndex + colorIndex].value.substring(1), 16);
+                const color = parseInt(paletteColors[basePaletteIndex + colorIndex].substring(1), 16);
 
                 image.data[index] = color >> 16 & 0xff;
                 image.data[index + 1] = color >> 8 & 0xff;
@@ -203,8 +219,9 @@ function updateOverlay(tile) {
 function copyEditorPaletteToGlobal(index) {
     const base = index * 16;
     for (let k = 0; k < 16; k++) {
-        paletteEntries[base + k].value = editorPaletteEntries[k].value;
+        paletteColors[base + k] = editorPaletteColors[k];
     }
+    updatePaletteUI();
 }
 
 // import a palette from https://lospec.com/palette-list/${name}.json
@@ -231,8 +248,9 @@ function importPalette() {
 
         const baseIndex = where * 16 + 1; // +1 to skip transparent
         for (let k = 0; k < obj.colors.length && k < 15; k++) {
-            paletteEntries[baseIndex + k].value = `#${obj.colors[k]}`;
+            paletteColors[baseIndex + k] = `#${obj.colors[k]}`;
         }
+        updatePaletteUI();
 
         urlField.value = '';
 
@@ -242,4 +260,14 @@ function importPalette() {
             updateOverlay(tiles[selectedTileIndex]);
         }
     })();
+}
+
+function updatePaletteUI() {
+    for (let k = 0; k < paletteEntries.length; k++) {
+        paletteEntries[k].style.backgroundColor = paletteColors[k];
+    }
+
+    for (let k = 0; k < editorPaletteEntries.length; k++) {
+        editorPaletteEntries[k].style.backgroundColor = editorPaletteColors[k];
+    }
 }

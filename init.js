@@ -14,11 +14,31 @@ function initializePalettes() {
     const paletteContainer = document.getElementById('palettes');
     const editorPaletteContainer = document.getElementById('editor-palette-area');
 
+    if (paletteColors.length === 0) {
+        for (let k = 0; k < 8 * 16; k++) {
+            paletteColors.push('#000000');
+        }
+    } else {
+        for (let k = 0; k < paletteColors.length; k++) {
+            paletteColors[k] = '#000000';
+        }
+    }
+
+    if (editorPaletteColors.length === 0) {
+        for (let k = 0; k < 16; k++) {
+            editorPaletteColors.push('#000000');
+        }
+    } else {
+        for (let k = 0; k < editorPaletteColors.length; k++) {
+            editorPaletteColors[k] = '#000000';
+        }
+    }
+
     if (paletteContainer.childNodes.length) {
         // palettes are unique in that the elements are kept - 
-        // tiles, bg, and editor pixels get recreated
-        paletteEntries.forEach(el => el.value = '#000000');
-        editorPaletteEntries.forEach(el => el.value = '#000000');
+        // tiles, bg, and editor pixels get recreated. update CSS of color divs
+        // to reflect new black colors
+        updatePaletteUI();
     } else {
         for (let pn = 0; pn < 8; pn++) {
             const palette = createPalette(pn);
