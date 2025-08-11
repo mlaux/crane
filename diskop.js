@@ -1,3 +1,11 @@
+function clampHexStringToRGB555Hex(color) {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const [clampedR, clampedG, clampedB] = clampTo555(r, g, b);
+    return `#${clampedR.toString(16).padStart(2, '0')}${clampedG.toString(16).padStart(2, '0')}${clampedB.toString(16).padStart(2, '0')}`;
+}
 
 function parseData(data) {
     // TODO fix this, should have the DOM value be the only tile size.
@@ -21,7 +29,8 @@ function parseData(data) {
     document.getElementById('project-name').value = data['name'];
 
     for (let k = 0; k < data['colors'].length; k++) {
-        paletteColors[k] = data['colors'][k];
+        const color = data['colors'][k];
+        paletteColors[k] = clampHexStringToRGB555Hex(color);
     }
     updatePaletteUI();
 
@@ -142,7 +151,8 @@ function loadSinglePalette() {
 
                 const baseIndex = paletteIndex * COLORS_PER_PALETTE;
                 for (let k = 0; k < COLORS_PER_PALETTE && k < colors.length; k++) {
-                    paletteColors[baseIndex + k] = colors[k];
+                    const color = colors[k];
+                    paletteColors[baseIndex + k] = clampHexStringToRGB555Hex(color);
                 }
                 updatePaletteUI();
 

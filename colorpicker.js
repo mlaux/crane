@@ -1,9 +1,9 @@
 function clampTo555(r, g, b) {
-    const r5 = Math.floor(r / 8) * 8;
-    const g5 = Math.floor(g / 8) * 8;
-    const b5 = Math.floor(b / 8) * 8;
+    const r5 = r >> 3;
+    const g5 = g >> 3;
+    const b5 = b >> 3;
 
-    return [r5, g5, b5];
+    return [r5 << 3, g5 << 3, b5 << 3];
 }
 
 function hslToRgb(h, s, l) {
@@ -33,7 +33,7 @@ function hslToRgb(h, s, l) {
         b = hue2rgb(p, q, h - 1/3);
     }
     
-    return [r * 255, g * 255, b * 255];
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 function rgbToHsl(r, g, b) {
