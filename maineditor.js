@@ -248,7 +248,7 @@ function importPalette() {
 
         const baseIndex = where * 16 + 1; // +1 to skip transparent
         for (let k = 0; k < obj.colors.length && k < 15; k++) {
-            paletteColors[baseIndex + k] = `#${obj.colors[k]}`;
+            paletteColors[baseIndex + k] = clampHexStringToRGB555Hex(obj.colors[k]);
         }
         updatePaletteUI();
 
