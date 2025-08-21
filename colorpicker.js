@@ -62,6 +62,20 @@ function rgbToHsl(r, g, b) {
     return [h * 360, s * 100, l * 100];
 }
 
+const ALL_EVENTS = [
+    'mousedown', 
+    'mouseup', 
+    'mousemove', 
+    'mouseover', 
+    'mouseout', 
+    'mouseenter', 
+    'mouseleave', 
+    'contextmenu', 
+    'keydown', 
+    'keyup', 
+    'keypress'
+];
+
 class RGB555ColorPicker {
     constructor() {
         this.currentH = 0;
@@ -70,41 +84,36 @@ class RGB555ColorPicker {
         this.isDraggingHS = false;
         this.isDraggingLightness = false;
         this.onColorChange = null;
-        this.overlay = null;
         this.container = null;
-        
+        this.isSetFromMode = false;
+        this.blockAllEvents = evt => {
+            if (!this.container.contains(evt.target)) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                evt.stopImmediatePropagation();
+                return false;
+            }
+        };
+    
         this.createPickerElements();
         this.setupEventHandlers();
     }
     
     createPickerElements() {
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.id = 'color-picker-overlay';
-        this.overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            z-index: 1000;
-        `;
-        
-        // Create picker container
         this.container = document.createElement('div');
         this.container.className = 'color-picker';
         this.container.style.cssText = `
-            position: absolute;
+            position: fixed;
             top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: inline-block;
+            right: 20px;
+            transform: translateY(-50%);
+            display: none;
             background: #282828;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             padding: 16px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         `;
         
         // Create HS rectangle container
@@ -217,6 +226,11 @@ class RGB555ColorPicker {
         const buttonContainer = document.createElement('div');
         buttonContainer.style.cssText = 'text-align: center;';
         
+        this.setFromButton = document.createElement('button');
+        this.setFromButton.style.marginRight = '4px';
+        this.setFromButton.textContent = 'Set from';
+        this.setFromButton.onclick = () => this.toggleSetFromMode();
+        
         const okButton = document.createElement('button');
         okButton.style.marginRight = '4px';
         okButton.textContent = 'OK';
@@ -226,6 +240,7 @@ class RGB555ColorPicker {
         cancelButton.textContent = 'Cancel';
         cancelButton.onclick = () => this.hide(false);
         
+        buttonContainer.appendChild(this.setFromButton);
         buttonContainer.appendChild(okButton);
         buttonContainer.appendChild(cancelButton);
         
@@ -237,8 +252,7 @@ class RGB555ColorPicker {
         this.container.appendChild(this.infoDisplay);
         this.container.appendChild(buttonContainer);
         
-        this.overlay.appendChild(this.container);
-        document.body.appendChild(this.overlay);
+        document.body.appendChild(this.container);
     }
     
     setupEventHandlers() {
@@ -269,6 +283,18 @@ class RGB555ColorPicker {
             this.isDraggingHS = false;
             this.isDraggingLightness = false;
         });
+        
+        // Global click listener for set from mode
+        document.addEventListener('click', (e) => {
+            if (this.isSetFromMode && !this.container.contains(e.target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const color = this.getColorAtScreenPoint(e.clientX, e.clientY);
+                if (color) {
+                    this.setFromColor(color);
+                }
+            }
+        }, true);
         
         // Hex input events
         this.colorText.addEventListener('input', (e) => {
@@ -405,14 +431,61 @@ class RGB555ColorPicker {
         this.updateUI();
     }
     
-    show(initialColor, callback) {
+    show(initialColor, callback, anchor = null) {
         this.onColorChange = callback;
         this.setColorFromHex(initialColor);
-        this.overlay.style.display = 'block';
+        this.positionNearAnchor(anchor);
+        this.container.style.display = 'block';
+    }
+    
+    positionNearAnchor(anchor) {
+        if (!anchor) {
+            this.container.style.top = '50%';
+            this.container.style.right = '20px';
+            this.container.style.left = 'auto';
+            this.container.style.transform = 'translateY(-50%)';
+            return;
+        }
+        
+        const rect = anchor.getBoundingClientRect();
+        const pickerWidth = 300;
+        const pickerHeight = 500;
+        
+        // Try to position to the right of the anchor
+        let left = rect.right + 16;
+        let top = rect.top;
+        
+        // If it would go off the right edge, position to the left
+        if (left + pickerWidth > window.innerWidth) {
+            left = rect.left - pickerWidth - 16;
+        }
+        
+        // If it would go off the left edge, center horizontally
+        if (left < 16) {
+            left = (window.innerWidth - pickerWidth) / 2;
+        }
+        
+        // If it would go off the bottom, adjust upward
+        if (top + pickerHeight > window.innerHeight) {
+            top = window.innerHeight - pickerHeight - 16;
+        }
+        
+        // If it would go off the top, adjust downward
+        if (top < 16) {
+            top = 16;
+        }
+        
+        this.container.style.left = left + 'px';
+        this.container.style.top = top + 'px';
+        this.container.style.right = 'auto';
+        this.container.style.transform = 'none';
     }
     
     hide(accepted) {
-        this.overlay.style.display = 'none';
+        this.container.style.display = 'none';
+        if (this.isSetFromMode) {
+            this.toggleSetFromMode();
+        }
         if (accepted && this.onColorChange) {
             const hex = this.colorText.value;
             this.onColorChange(hex);
@@ -422,6 +495,129 @@ class RGB555ColorPicker {
     
     getCurrentColor() {
         return this.colorText.value;
+    }
+    
+    toggleSetFromMode() {
+        this.isSetFromMode = !this.isSetFromMode;
+        this.setFromButton.textContent = this.isSetFromMode ? 'Cancel set from' : 'Set from';
+        this.setFromButton.style.backgroundColor = this.isSetFromMode ? '#ff6b6b' : '';
+        
+        if (this.isSetFromMode) {
+            this.enableSetFromMode();
+        } else {
+            this.disableSetFromMode();
+        }
+    }
+
+    enableSetFromMode() {
+        // Create CSS rule to override all cursors
+        this.cursorStyle = document.createElement('style');
+        this.cursorStyle.textContent = '* { cursor: crosshair !important; }';
+        document.head.appendChild(this.cursorStyle);
+        
+        // Add event blockers for all interaction events
+        ALL_EVENTS.forEach(eventType => {
+            document.addEventListener(eventType, this.blockAllEvents, true);
+        });
+    }
+
+    disableSetFromMode() {
+        if (this.cursorStyle) {
+            document.head.removeChild(this.cursorStyle);
+            this.cursorStyle = null;
+        }
+
+        ALL_EVENTS.forEach(eventType => {
+            document.removeEventListener(eventType, this.blockAllEvents, true);
+        });
+    }
+    
+    setFromColor(color) {
+        if (this.isSetFromMode) {
+            this.setColorFromHex(color);
+            this.toggleSetFromMode();
+        }
+    }
+
+    getColorAtScreenPoint(clientX, clientY) {
+        // temporarily disable pointer-events so that it can get the element 
+        // below the overlay
+        const overlay = document.getElementById('tile-editor-overlay');
+        const originalPointerEvents = overlay.style.pointerEvents;
+        overlay.style.pointerEvents = 'none';
+
+        const element = document.elementFromPoint(clientX, clientY);
+    
+        overlay.style.pointerEvents = originalPointerEvents;
+        
+        if (!element) {
+            return null;
+        }
+        return this.getColorAtPoint(element, clientX, clientY);
+    }
+    
+    getColorAtPoint(element, clientX, clientY) {
+        if (element.tagName === 'CANVAS') {
+            return this.getCanvasColorAtPoint(element, clientX, clientY);
+        }
+
+        return this.getComputedColor(element);
+    }
+
+    getCanvasColorAtPoint(canvas, clientX, clientY) {
+        try {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((clientX - rect.left) * (canvas.width / rect.width));
+            const y = Math.floor((clientY - rect.top) * (canvas.height / rect.height));
+            
+            if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+                return null;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(x, y, 1, 1);
+            const [r, g, b] = imageData.data;
+            
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    getComputedColor(element) {
+        try {
+            const computed = window.getComputedStyle(element);
+            const bgColor = computed.backgroundColor;
+            
+            // ignore transparent so we can give the .color a try
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                return this.parseColorWithCanvas(bgColor);
+            }
+            
+            const color = computed.color;
+            if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {
+                return this.parseColorWithCanvas(color);
+            }
+            
+            return null;
+        } catch (e) {
+            console.log('error retrieving color', e);
+            return null;
+        }
+    }
+
+    parseColorWithCanvas(colorString) {
+        // Use canvas to parse any CSS color format
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = colorString;
+        ctx.fillRect(0, 0, 1, 1);
+        
+        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 }
 

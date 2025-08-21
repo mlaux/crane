@@ -25,7 +25,7 @@ function createPalette(text, forTileEditor) {
                     showColorPicker(editorPaletteColors[colorIndex], (newColor) => {
                         editorPaletteColors[colorIndex] = newColor;
                         onTileEditorPaletteEntryChanged();
-                    });
+                    }, entry);
                 } else {
                     selectPaletteEntry(entry);
                 }
@@ -39,7 +39,7 @@ function createPalette(text, forTileEditor) {
                 showColorPicker(paletteColors[globalIndex], (newColor) => {
                     paletteColors[globalIndex] = newColor;
                     onGlobalPaletteEntryChanged();
-                });
+                }, entry);
             };
             paletteEntries.push(entry);
         }
@@ -51,9 +51,9 @@ function createPalette(text, forTileEditor) {
     return row;
 }
 
-function showColorPicker(currentColor, callback) {
+function showColorPicker(currentColor, callback, anchor = null) {
     const picker = getColorPicker();
-    picker.show(currentColor, callback);
+    picker.show(currentColor, callback, anchor);
 }
 
 function createTile() {
@@ -166,6 +166,7 @@ function onTileEditorPaletteEntryChanged() {
     copyEditorPaletteToGlobal(parseInt(editorPaletteSelector.value));
     redrawPixels();
     redrawTiles();
+    redrawBackground();
 }
 
 function redrawTile(tile) {

@@ -27,6 +27,8 @@ function closeTileEditor() {
         }
     }
 
+    getColorPicker().hide(false);
+
     // editing a tile affects both the tile and the background
     redrawTile(editedTile);
     redrawBackground();
