@@ -12,11 +12,18 @@
 #define SEQ_REG_MAP_MASK 2
 #define SEQ_REG_CHARMAP_SELECT 3
 #define SEQ_REG_MEM_MODE 4
+#define SEQ_REG_READ_MAP 4
+
+#define GC_INDEX 0x03ce
+#define GC_READ_MAP 4
 
 #define CRTC_INDEX 0x03d4
 #define MISC_OUTPUT 0x03c2
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240
+
+#define CURSOR_WIDTH 8
+#define CURSOR_HEIGHT 8
 
 #define CRTC_V_TOTAL 0x06
 #define CRTC_OVERFLOWS 0x07
@@ -35,16 +42,37 @@
 #define far
 #endif
 
-#ifndef REGS
+#ifndef __WATCOMC__
 union REGS {
-    union {
-        char ah;
-        char al;
+    struct {
+        unsigned short ax, bx, cx, dx;
+    } x;
+    struct {
+        unsigned char al, ah, bl, bh, cl, ch, dl, dh;
     } h;
 };
 #endif
 
 unsigned char far *vga = (unsigned char far *)0xa0000000L;
+
+unsigned char cursor_buffer[CURSOR_WIDTH * CURSOR_HEIGHT];
+int cursor_x = SCREEN_WIDTH / 2;
+int cursor_y = SCREEN_HEIGHT / 2;
+int cursor_visible = 0;
+
+#define B 0xff
+#define W 0x0f
+
+unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
+    W, 0, 0, 0, 0, 0, 0, 0,
+    W, W, 0, 0, 0, 0, 0, 0,
+    W, B, W, 0, 0, 0, 0, 0,
+    W, B, B, W, 0, 0, 0, 0,
+    W, B, B, B, W, 0, 0, 0,
+    W, B, B, B, B, W, 0, 0,
+    W, B, B, B, B, B, W, 0,
+    W, W, W, W, W, W, W, W,
+};
 
 void set_mode(unsigned char mode) {
     union REGS regs;
@@ -190,11 +218,113 @@ void set_mode_x(void) {
     _fmemset(vga, 0x80, 0x8000);
 }
 
+void put_pixel(int x, int y, unsigned char color) {
+    unsigned int offset;
+    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+        return;
+    offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
+    outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
+    outp(SEQ_ADDR + 1, 1 << (x & 3));
+    vga[offset] = color;
+}
+
+unsigned char get_pixel(int x, int y) {
+    unsigned int offset;
+    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+        return 0;
+    offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
+    outp(GC_INDEX, GC_READ_MAP);
+    outp(GC_INDEX + 1, x & 3);
+    return vga[offset];
+}
+
+void save_cursor_background(void) {
+    int x, y, k = 0;
+    for(y = 0; y < CURSOR_HEIGHT; y++) {
+        for(x = 0; x < CURSOR_WIDTH; x++) {
+            cursor_buffer[k++] = get_pixel(cursor_x + x, cursor_y + y);
+        }
+    }
+}
+
+void restore_cursor_background(void) {
+    int x, y, k = 0;
+    for(y = 0; y < CURSOR_HEIGHT; y++) {
+        for(x = 0; x < CURSOR_WIDTH; x++) {
+            put_pixel(cursor_x + x, cursor_y + y, cursor_buffer[k++]);
+        }
+    }
+}
+
+void draw_cursor(void) {
+    int x, y, k = 0;
+    for(y = 0; y < CURSOR_HEIGHT; y++) {
+        for(x = 0; x < CURSOR_WIDTH; x++) {
+            if(cursor_sprite[k] != 0) {
+                put_pixel(cursor_x + x, cursor_y + y, cursor_sprite[k]);
+            }
+            k++;
+        }
+    }
+}
+
+void show_cursor(void) {
+    if(cursor_visible)
+        return;
+    save_cursor_background();
+    draw_cursor();
+    cursor_visible = 1;
+}
+
+void hide_cursor(void) {
+    if(!cursor_visible)
+        return;
+    restore_cursor_background();
+    cursor_visible = 0;
+}
+
+void move_cursor(int x, int y) {
+    hide_cursor();
+    cursor_x = x;
+    cursor_y = y;
+    show_cursor();
+}
+
+void init_mouse(void) {
+    union REGS regs;
+    regs.x.ax = 0x00;
+    int86(0x33, &regs, &regs);
+
+    regs.x.ax = 0x08;
+    regs.x.cx = 0;
+    regs.x.dx = SCREEN_HEIGHT - 1;
+    int86(0x33, &regs, &regs);
+}
+
+int poll_mouse(int *x, int *y) {
+    union REGS regs;
+    regs.x.ax = 0x03;
+    int86(0x33, &regs, &regs);
+    *x = regs.x.cx >> 1;
+    *y = regs.x.dx;
+    return regs.x.bx;
+}
+
 int main(void) {
+    int mx, my, last_mx = -1, last_my = -1;
+
     set_mode_x();
+    init_mouse();
+    show_cursor();
 
     while(!kbhit() || getch() != 27) {
-        wait_vblank();
+        poll_mouse(&mx, &my);
+        if(mx != last_mx || my != last_my) {
+            wait_vblank();
+            move_cursor(mx, my);
+            last_mx = mx;
+            last_my = my;
+        }
     }
 
     set_mode(0x03);
