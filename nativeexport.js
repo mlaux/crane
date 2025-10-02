@@ -69,7 +69,7 @@ function exportBackground() {
             }
 
             let paletteNum = 0; // Default palette for blank tile
-            if (tileNum !== -1) {
+            if (tileNum !== blankTileIndex) {
                 paletteNum = tiles[tileNum].palette + paletteOffset;
             }
 
