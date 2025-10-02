@@ -38,12 +38,8 @@
 #define CRTC_MODE_CONTROL 0x17
 
 // to get rid of syntax errors in vscode
-
-#ifndef far
-#define far
-#endif
-
 #ifndef __WATCOMC__
+#define far
 union REGS {
     struct {
         unsigned short ax, bx, cx, dx;
@@ -74,6 +70,26 @@ unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
     W, B, B, B, B, B, W, 0,
     W, W, W, W, W, W, W, W,
 };
+
+// 16x16 checkerboard for testing
+// unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+// };
 
 void set_mode(unsigned char mode) {
     union REGS regs;
@@ -221,7 +237,7 @@ void set_mode_x(void) {
 
 void put_pixel(int x, int y, unsigned char color) {
     unsigned int offset;
-    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
         return;
     offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
     outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
@@ -231,7 +247,7 @@ void put_pixel(int x, int y, unsigned char color) {
 
 unsigned char get_pixel(int x, int y) {
     unsigned int offset;
-    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
         return 0;
     offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
     outp(GC_INDEX, GC_READ_MAP);
@@ -243,13 +259,14 @@ void save_cursor_background(void) {
     int x, y, plane;
     int start_plane = cursor_x & 3;
     int offset, out_offset = 0;
+    int start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
     int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
 
     for(plane = 0; plane < 4; plane++) {
         outp(GC_INDEX, GC_READ_MAP);
         outp(GC_INDEX + 1, plane);
 
-        offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
+        offset = start_offset;
         for(y = 0; y < CURSOR_HEIGHT; y++) {
             for(x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
@@ -266,13 +283,14 @@ void restore_cursor_background(void) {
     int x, y, plane;
     int start_plane = cursor_x & 3;
     int offset, in_offset = 0;
+    int start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
     int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
 
     for(plane = 0; plane < 4; plane++) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
         outp(SEQ_ADDR + 1, 1 << plane);
 
-        offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
+        offset = start_offset;
         for(y = 0; y < CURSOR_HEIGHT; y++) {
             for(x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
@@ -285,34 +303,38 @@ void restore_cursor_background(void) {
     }
 }
 
-void draw_cursor(void) {
+void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height) {
     int x, y, plane;
-    int start_plane = cursor_x & 3;
-    int offset, in_offset;
-    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
+    int start_plane = sx & 3;
+    int offset, in_offset, start_offset;
+    int bytes_per_row = (width >> 2) + (start_plane != 0);
 
-    plane = 0;
+    start_offset = sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+
     for (plane = 0; plane < 4; plane++) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
         outp(SEQ_ADDR + 1, 1 << plane);
 
-        offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
+        offset = start_offset;
         in_offset = 0;
-        for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < bytes_per_row; x++) {
+        for (y = 0; y < height; y++) {
+            for (x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
-                if (sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
+                if (sprite_x >= 0 && sprite_x < width) {
                     int use = in_offset + sprite_x;
-                    if(cursor_sprite[use] != 0) {
-                        vga[offset + x] = cursor_sprite[use];
+                    if (data[use] != 0) {
+                        vga[offset + x] = data[use];
                     }
                 }
-
             }
-            in_offset += CURSOR_WIDTH;
+            in_offset += width;
             offset += SCREEN_WIDTH >> 2;
         }
     }
+}
+
+void draw_cursor(void) {
+    draw_sprite(cursor_sprite, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
 }
 
 void show_cursor(void) {
@@ -361,18 +383,12 @@ int main(void) {
     int mx, my, last_mx = -1, last_my = -1;
 
     set_mode_x();
-    // for (my = 0; my < CURSOR_HEIGHT; my++) {
-    //     for (mx = 0; mx < CURSOR_WIDTH; mx++) {
-    //         printf("%d ", cursor_sprite_bp[my * CURSOR_WIDTH + mx]);
-    //     }
-    //     printf("\n");
-    // }
     init_mouse();
     show_cursor();
 
-    while(!kbhit() || getch() != 27) {
+    while (!kbhit() || getch() != 27) {
         poll_mouse(&mx, &my);
-        if(mx != last_mx || my != last_my) {
+        if (mx != last_mx || my != last_my) {
             wait_vblank();
             move_cursor(mx, my);
             last_mx = mx;
