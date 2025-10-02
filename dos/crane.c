@@ -241,69 +241,77 @@ unsigned char get_pixel(int x, int y) {
 
 void save_cursor_background(void) {
     int x, y, plane;
+    int start_plane = cursor_x & 3;
     int offset, out_offset = 0;
-    int bp = cursor_x & 3;
+    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
 
     for(plane = 0; plane < 4; plane++) {
         outp(GC_INDEX, GC_READ_MAP);
-        outp(GC_INDEX + 1, bp);
+        outp(GC_INDEX + 1, plane);
 
         offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
         for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < (CURSOR_WIDTH >> 2); x++) {
-                cursor_buffer[out_offset++] = vga[offset + x];
+            for(x = 0; x < bytes_per_row; x++) {
+                int sprite_x = (x << 2) + plane - start_plane;
+                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
+                    cursor_buffer[out_offset++] = vga[offset + x];
+                }
             }
             offset += SCREEN_WIDTH >> 2;
         }
-
-        bp = (bp + 1) & 3;
     }
 }
 
 void restore_cursor_background(void) {
     int x, y, plane;
+    int start_plane = cursor_x & 3;
     int offset, in_offset = 0;
-    int bp = cursor_x & 3;
+    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
 
     for(plane = 0; plane < 4; plane++) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-        outp(SEQ_ADDR + 1, 1 << bp);
+        outp(SEQ_ADDR + 1, 1 << plane);
 
         offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
         for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < (CURSOR_WIDTH >> 2); x++) {
-                vga[offset + x] = cursor_buffer[in_offset++];
+            for(x = 0; x < bytes_per_row; x++) {
+                int sprite_x = (x << 2) + plane - start_plane;
+                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
+                    vga[offset + x] = cursor_buffer[in_offset++];
+                }
             }
             offset += SCREEN_WIDTH >> 2;
         }
-
-        bp = (bp + 1) & 3;
     }
 }
 
 void draw_cursor(void) {
     int x, y, plane;
-    int bp = cursor_x & 3;
+    int start_plane = cursor_x & 3;
     int offset, in_offset;
+    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
 
-    for(plane = 0; plane < 4; plane++) {
+    plane = 0;
+    for (plane = 0; plane < 4; plane++) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-        outp(SEQ_ADDR + 1, 1 << bp);
+        outp(SEQ_ADDR + 1, 1 << plane);
 
         offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
         in_offset = 0;
         for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < (CURSOR_WIDTH >> 2); x++) {
-                int use = in_offset + (x << 2) + bp;
-                if(cursor_sprite[use] != 0) {
-                    vga[offset + x] = cursor_sprite[use];
+            for(x = 0; x < bytes_per_row; x++) {
+                int sprite_x = (x << 2) + plane - start_plane;
+                if (sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
+                    int use = in_offset + sprite_x;
+                    if(cursor_sprite[use] != 0) {
+                        vga[offset + x] = cursor_sprite[use];
+                    }
                 }
+
             }
             in_offset += CURSOR_WIDTH;
             offset += SCREEN_WIDTH >> 2;
         }
-
-        bp = (bp + 1) & 3;
     }
 }
 
@@ -353,7 +361,6 @@ int main(void) {
     int mx, my, last_mx = -1, last_my = -1;
 
     set_mode_x();
-    rearrange_cursor();
     // for (my = 0; my < CURSOR_HEIGHT; my++) {
     //     for (mx = 0; mx < CURSOR_WIDTH; mx++) {
     //         printf("%d ", cursor_sprite_bp[my * CURSOR_WIDTH + mx]);
