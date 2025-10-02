@@ -1,5 +1,5 @@
 CC=wcl
-CFLAGS=-0 -ms -w4 -we -ox
+CFLAGS=-0 -ms -w4 -ox
 TARGET=crane.exe
 
 $(TARGET): crane.c

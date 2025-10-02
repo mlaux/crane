@@ -29,6 +29,8 @@
 #define CRTC_V_TOTAL 0x06
 #define CRTC_OVERFLOWS 0x07
 #define CRTC_MAX_SCAN_LINE 0x09
+#define CRTC_START_ADDR_HI 0x0c
+#define CRTC_START_ADDR_LO 0x0d
 #define CRTC_V_RETRACE_START 0x10
 #define CRTC_V_RETRACE_END 0x11
 #define CRTC_V_DISPLAY_END 0x12
@@ -56,19 +58,21 @@ unsigned char cursor_buffer[CURSOR_WIDTH * CURSOR_HEIGHT];
 int cursor_x = SCREEN_WIDTH / 2;
 int cursor_y = SCREEN_HEIGHT / 2;
 int cursor_visible = 0;
+unsigned int visible_page = 0;
+unsigned int active_page = 0x8000;
 
 #define B 0xff
 #define W 0x0f
 
 unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
-    W, 0, 0, 0, 0, 0, 0, 0,
-    W, W, 0, 0, 0, 0, 0, 0,
-    W, B, W, 0, 0, 0, 0, 0,
-    W, B, B, W, 0, 0, 0, 0,
-    W, B, B, B, W, 0, 0, 0,
-    W, B, B, B, B, W, 0, 0,
-    W, B, B, B, B, B, W, 0,
     W, W, W, W, W, W, W, W,
+    W, B, B, B, B, B, W, 0,
+    W, B, B, B, B, W, 0, 0,
+    W, B, B, B, W, 0, 0, 0,
+    W, B, B, W, 0, 0, 0, 0,
+    W, B, W, 0, 0, 0, 0, 0,
+    W, W, 0, 0, 0, 0, 0, 0,
+    W, 0, 0, 0, 0, 0, 0, 0,
 };
 
 // 16x16 checkerboard for testing
@@ -233,6 +237,7 @@ void set_mode_x(void) {
     outp(SEQ_ADDR + 1, 0x0f);
 
     _fmemset(vga, 0x80, 0x8000);
+    // _fmemset(&vga[0x8000], 0x60, 0x8000);
 }
 
 void put_pixel(int x, int y, unsigned char color) {
@@ -255,61 +260,13 @@ unsigned char get_pixel(int x, int y) {
     return vga[offset];
 }
 
-void save_cursor_background(void) {
-    int x, y, plane;
-    int start_plane = cursor_x & 3;
-    int offset, out_offset = 0;
-    int start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
-    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
-
-    for(plane = 0; plane < 4; plane++) {
-        outp(GC_INDEX, GC_READ_MAP);
-        outp(GC_INDEX + 1, plane);
-
-        offset = start_offset;
-        for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < bytes_per_row; x++) {
-                int sprite_x = (x << 2) + plane - start_plane;
-                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
-                    cursor_buffer[out_offset++] = vga[offset + x];
-                }
-            }
-            offset += SCREEN_WIDTH >> 2;
-        }
-    }
-}
-
-void restore_cursor_background(void) {
-    int x, y, plane;
-    int start_plane = cursor_x & 3;
-    int offset, in_offset = 0;
-    int start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
-    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
-
-    for(plane = 0; plane < 4; plane++) {
-        outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-        outp(SEQ_ADDR + 1, 1 << plane);
-
-        offset = start_offset;
-        for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < bytes_per_row; x++) {
-                int sprite_x = (x << 2) + plane - start_plane;
-                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
-                    vga[offset + x] = cursor_buffer[in_offset++];
-                }
-            }
-            offset += SCREEN_WIDTH >> 2;
-        }
-    }
-}
-
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height) {
     int x, y, plane;
     int start_plane = sx & 3;
-    int offset, in_offset, start_offset;
+    unsigned int offset, in_offset, start_offset;
     int bytes_per_row = (width >> 2) + (start_plane != 0);
 
-    start_offset = sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+    start_offset = active_page + sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
 
     for (plane = 0; plane < 4; plane++) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
@@ -320,7 +277,7 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
         for (y = 0; y < height; y++) {
             for (x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
-                if (sprite_x >= 0 && sprite_x < width) {
+                if (sprite_x >= 0 && sprite_x < width && sx + sprite_x < SCREEN_WIDTH) {
                     int use = in_offset + sprite_x;
                     if (data[use] != 0) {
                         vga[offset + x] = data[use];
@@ -335,28 +292,6 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
 
 void draw_cursor(void) {
     draw_sprite(cursor_sprite, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
-}
-
-void show_cursor(void) {
-    if(cursor_visible)
-        return;
-    save_cursor_background();
-    draw_cursor();
-    cursor_visible = 1;
-}
-
-void hide_cursor(void) {
-    if(!cursor_visible)
-        return;
-    restore_cursor_background();
-    cursor_visible = 0;
-}
-
-void move_cursor(int x, int y) {
-    hide_cursor();
-    cursor_x = x;
-    cursor_y = y;
-    show_cursor();
 }
 
 void init_mouse(void) {
@@ -379,21 +314,44 @@ int poll_mouse(int *x, int *y) {
     return regs.x.bx;
 }
 
+void flip_pages(void)
+{
+    unsigned int temp;
+
+    temp = visible_page;
+    visible_page = active_page;
+    active_page = temp;
+
+    while (inp(INPUT_STATUS_1) & VRETRACE);
+    _disable();
+    outp(CRTC_INDEX, CRTC_START_ADDR_HI);
+    outp(CRTC_INDEX + 1, (visible_page >> 8) & 0xff);
+    outp(CRTC_INDEX, CRTC_START_ADDR_LO);
+    outp(CRTC_INDEX + 1, visible_page & 0xff);
+    _enable();
+
+    while (!(inp(INPUT_STATUS_1) & VRETRACE));
+}
+
 int main(void) {
-    int mx, my, last_mx = -1, last_my = -1;
+    int mx, my;
 
     set_mode_x();
     init_mouse();
-    show_cursor();
 
     while (!kbhit() || getch() != 27) {
         poll_mouse(&mx, &my);
-        if (mx != last_mx || my != last_my) {
-            wait_vblank();
-            move_cursor(mx, my);
-            last_mx = mx;
-            last_my = my;
-        }
+        cursor_x = mx;
+        cursor_y = my;
+
+        outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
+        outp(SEQ_ADDR + 1, 0x0f);
+        _fmemset(&vga[active_page], 0x80, 19200);
+
+        // do other drawing here
+        draw_cursor();
+
+        flip_pages();
     }
 
     set_mode(0x03);
