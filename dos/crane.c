@@ -311,6 +311,13 @@ void frame_rect(int x0, int y0, int width, int height, unsigned char color)
     horizontal_line(x0, x1, y0, color);
     horizontal_line(x0, x1, y1, color);
 }
+void fill_rect(int x0, int y0, int width, int height, unsigned char color)
+{
+    int y;
+    for (y = y0; y < y0 + height; y++) {
+        horizontal_line(x0, x0 + width - 1, y, color);
+    }
+}
 
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height) {
     int x, y, plane;
@@ -437,7 +444,7 @@ int main(void) {
         draw_string("hello, crane", 50, 70);
         draw_string("hello, crane", 50, 80);
 
-        frame_rect(2, 2, 316, 236, 0x0f);
+        fill_rect(40, 80, 200, 50, 0x27);
 
         //frame_rect(16, 16, 3, 10, 0x0f);
         //frame_rect(17, 16, 3, 10, 0x0f);
