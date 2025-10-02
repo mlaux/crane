@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+#include "font.h"
 
 #define VIDEO_INT 0x10
 #define INPUT_STATUS_1 0x03da
@@ -242,22 +244,72 @@ void set_mode_x(void) {
 
 void put_pixel(int x, int y, unsigned char color) {
     unsigned int offset;
-    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
         return;
-    offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
-    outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-    outp(SEQ_ADDR + 1, 1 << (x & 3));
+    }
+    // outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
+    // outp(SEQ_ADDR + 1, 1 << (x & 3));
+    outpw(SEQ_ADDR, 1 << ((x & 3) + 8) | SEQ_REG_MAP_MASK);
+    offset = active_page + (y << 6) + (y << 4) + (x >> 2);
     vga[offset] = color;
 }
 
-unsigned char get_pixel(int x, int y) {
-    unsigned int offset;
-    if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
-        return 0;
-    offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
-    outp(GC_INDEX, GC_READ_MAP);
-    outp(GC_INDEX + 1, x & 3);
-    return vga[offset];
+void horizontal_line(int x0, int x1, int y, unsigned char color)
+{
+    int first_byte = x0 >> 2;
+    int last_byte = x1 >> 2;
+    int left_mask = 0x0f << (x0 & 3);
+    int right_mask = 0x0f >> (3 - (x1 & 3));
+    int offset = active_page + (y << 6) + (y << 4) + first_byte;
+    int x;
+
+    if (first_byte == last_byte) {
+        outpw(SEQ_ADDR, ((left_mask & right_mask) << 8) | SEQ_REG_MAP_MASK);
+        vga[offset] = color;
+    } else {
+        outpw(SEQ_ADDR, (left_mask << 8) | SEQ_REG_MAP_MASK);
+        vga[offset++] = color;
+        outpw(SEQ_ADDR, 0x0f00 | SEQ_REG_MAP_MASK);
+        for (x = first_byte + 1; x < last_byte; x++) {
+            vga[offset++] = color;
+        }
+        outpw(SEQ_ADDR, (right_mask << 8) | SEQ_REG_MAP_MASK);
+        vga[offset] = color;
+    }
+}
+
+void vertical_line(int x, int y0, int y1, unsigned char color)
+{
+    int x_plane = 1 << (x & 3);
+    int y, offset;
+
+    outpw(SEQ_ADDR, x_plane << 8 | SEQ_REG_MAP_MASK);
+    for (y = y0; y < y1; y++) {
+        offset = active_page + (y << 6) + (y << 4) + (x >> 2);
+        vga[offset] = color;
+    }
+}
+
+void drawf(int x, int y, const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
+    draw_string(buf, x, y);
+}
+
+void frame_rect(int x0, int y0, int width, int height, unsigned char color)
+{
+    int x1 = x0 + width - 1;
+    int y1 = y0 + height - 1;
+
+    vertical_line(x0, y0, y1, color);
+    vertical_line(x1, y0, y1, color);
+
+    horizontal_line(x0, x1, y0, color);
+    horizontal_line(x0, x1, y1, color);
 }
 
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height) {
@@ -292,6 +344,39 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
 
 void draw_cursor(void) {
     draw_sprite(cursor_sprite, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
+}
+
+extern const struct bitmap_font font;
+
+void draw_char(unsigned char uch, int x, int y) {
+    unsigned short char_index;
+    const unsigned char *glyph_data;
+    int k;
+
+    if (uch >= font.Chars)
+        return;
+
+    char_index = font.Index[uch];
+    glyph_data = &font.Bitmap[char_index * font.Height];
+
+    for (k = 0; k < font.Height; k++) {
+        unsigned char row = glyph_data[k];
+        int bit;
+        for (bit = 7; bit >= 3; bit--) {
+            if (row & (1 << bit)) {
+                put_pixel(x + (7 - bit), y + k, 0x0f);
+            }
+        }
+    }
+}
+
+void draw_string(const char *str, int x, int y) {
+    int offset = 0;
+    while (*str) {
+        draw_char(*str, x + offset, y);
+        offset += font.Width;
+        str++;
+    }
 }
 
 void init_mouse(void) {
@@ -347,6 +432,15 @@ int main(void) {
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
         outp(SEQ_ADDR + 1, 0x0f);
         _fmemset(&vga[active_page], 0x80, 19200);
+        draw_string("PALETTES", 8, 8);
+        draw_string("hello, crane", 50, 60);
+        draw_string("hello, crane", 50, 70);
+        draw_string("hello, crane", 50, 80);
+
+        frame_rect(2, 2, 316, 236, 0x0f);
+
+        //frame_rect(16, 16, 3, 10, 0x0f);
+        //frame_rect(17, 16, 3, 10, 0x0f);
 
         // do other drawing here
         draw_cursor();
