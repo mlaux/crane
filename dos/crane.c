@@ -2,14 +2,12 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "vga.h"
 #include "font.h"
 #include "compat.h"
 #include "palette.h"
-#include "vga.h"
 #include "mouse.h"
 #include "cursor.h"
-
-extern unsigned char far *vga;
 
 // 16x16 checkerboard for testing
 static const unsigned char example_tile[256] = {
@@ -67,11 +65,15 @@ int main(void) {
     wait_vblank();
     upload_ui_palette();
 
-    draw_window(4, 4, 264, 256);
+    draw_window(4, 4, 44, 224);
+    draw_sprite_aligned_16x16(example_tile, 8, 8);
+    draw_sprite_aligned_16x16(example_tile, 28, 8);
+
+    draw_window(52, 4, 264, 232);
 
     for (y = 0; y < 14; y++) { 
         for (x = 0; x < 16; x++) {
-            draw_sprite_aligned_16x16(example_tile, 8 + x * 16, 8 + y * 16);
+            draw_sprite_aligned_16x16(example_tile, 56 + x * 16, 8 + y * 16);
         }
     }
 

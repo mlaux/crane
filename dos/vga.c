@@ -83,16 +83,6 @@ void fill_rect(int x0, int y0, int width, int height, unsigned char color)
     }
 }
 
-void drawf(int x, int y, const char *fmt, ...)
-{
-    char buf[256];
-    va_list args;
-    va_start(args, fmt);
-    vsprintf(buf, fmt, args);
-    va_end(args);
-    draw_string(buf, x, y);
-}
-
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height)
 {
     int x, y, plane;
@@ -149,6 +139,16 @@ void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy)
             offset += SCREEN_WIDTH >> 2;
         }
     }
+}
+
+void drawf(int x, int y, const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
+    draw_string(buf, x, y);
 }
 
 void draw_char(unsigned char uch, int x, int y)
