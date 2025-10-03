@@ -41,6 +41,10 @@
 #define CRTC_V_BLANK_END 0x16
 #define CRTC_MODE_CONTROL 0x17
 
+#define DAC_READ_INDEX 0x3c7
+#define DAC_WRITE_INDEX 0x3c8
+#define DAC_DATA 0x3c9
+
 // to get rid of syntax errors in vscode
 #ifndef __WATCOMC__
 #define far
@@ -54,7 +58,7 @@ union REGS {
 };
 #endif
 
-unsigned char far *vga = (unsigned char far *)0xa0000000L;
+unsigned char far *vga = (unsigned char far *) 0xa0000000L;
 
 unsigned char cursor_buffer[CURSOR_WIDTH * CURSOR_HEIGHT];
 int cursor_x = SCREEN_WIDTH / 2;
@@ -63,10 +67,10 @@ int cursor_visible = 0;
 unsigned int visible_page = 0;
 unsigned int active_page = 0x8000;
 
-#define B 0xff
-#define W 0x0f
+#define B 0x10
+#define W 0x1f
 
-unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
+static const unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
     W, W, W, W, W, W, W, W,
     W, B, B, B, B, B, W, 0,
     W, B, B, B, B, W, 0, 0,
@@ -76,6 +80,30 @@ unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
     W, W, 0, 0, 0, 0, 0, 0,
     W, 0, 0, 0, 0, 0, 0, 0,
 };
+
+// 00 means transparent so not using it for black
+// 01-0f are my UI colors
+// 10-1f are stock VGA grays (10 = black, 1f = white)
+// 20-37 is a "fully saturated" rainbow (blue to blue)
+// 38-4f is a lighter rainbow
+// 50-67 is an even lighter rainbow
+// 68-7f is a dark rainbow
+// 80-ff are SNES palettes 0-7, converted from RGB565 to RGB666
+//         (red and blue scaled by 2)
+
+static const unsigned char ui_colors[] = {
+    14, 14, 28, // this is stock color 0x80
+    8, 8, 16,   // 0xc8
+    20, 20, 28, // 0x98
+};
+
+#define NUM_UI_COLORS (sizeof ui_colors / (3 * sizeof ui_colors[0]))
+#define FIRST_UI_COLOR 0x1
+#define BACKGROUND_COLOR 0x1
+#define CONTENT_COLOR 0x2
+#define HIGHLIGHT_COLOR 0x3
+
+#define FIRST_SNES_COLOR 0x80
 
 // 16x16 checkerboard for testing
 // unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
@@ -97,20 +125,23 @@ unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
 //     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
 // };
 
-void set_mode(unsigned char mode) {
+void set_mode(unsigned char mode)
+{
     union REGS regs;
     regs.h.ah = 0x00;
     regs.h.al = mode;
     int86(VIDEO_INT, &regs, &regs);
 }
 
-void wait_vblank(void) {
+void wait_vblank(void)
+{
     while(inp(INPUT_STATUS_1) & VRETRACE);
     while(!(inp(INPUT_STATUS_1) & VRETRACE));
 }
 
 // http://www.mcamafia.de/pdf/ibm_vgaxga_trm2.pdf
-void set_mode_x(void) {
+void set_mode_x(void)
+{
     unsigned char v;
 
     set_mode(0x13);
@@ -242,7 +273,8 @@ void set_mode_x(void) {
     // _fmemset(&vga[0x8000], 0x60, 0x8000);
 }
 
-void put_pixel(int x, int y, unsigned char color) {
+void put_pixel(int x, int y, unsigned char color)
+{
     unsigned int offset;
     if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
         return;
@@ -311,6 +343,7 @@ void frame_rect(int x0, int y0, int width, int height, unsigned char color)
     horizontal_line(x0, x1, y0, color);
     horizontal_line(x0, x1, y1, color);
 }
+
 void fill_rect(int x0, int y0, int width, int height, unsigned char color)
 {
     int y;
@@ -319,7 +352,8 @@ void fill_rect(int x0, int y0, int width, int height, unsigned char color)
     }
 }
 
-void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height) {
+void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height)
+{
     int x, y, plane;
     int start_plane = sx & 3;
     unsigned int offset, in_offset, start_offset;
@@ -349,13 +383,15 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
     }
 }
 
-void draw_cursor(void) {
+void draw_cursor(void)
+{
     draw_sprite(cursor_sprite, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
 }
 
 extern const struct bitmap_font font;
 
-void draw_char(unsigned char uch, int x, int y) {
+void draw_char(unsigned char uch, int x, int y)
+{
     unsigned short char_index;
     const unsigned char *glyph_data;
     int k;
@@ -377,7 +413,8 @@ void draw_char(unsigned char uch, int x, int y) {
     }
 }
 
-void draw_string(const char *str, int x, int y) {
+void draw_string(const char *str, int x, int y)
+{
     int offset = 0;
     while (*str) {
         draw_char(*str, x + offset, y);
@@ -386,7 +423,8 @@ void draw_string(const char *str, int x, int y) {
     }
 }
 
-void init_mouse(void) {
+void init_mouse(void)
+{
     union REGS regs;
     regs.x.ax = 0x00;
     int86(0x33, &regs, &regs);
@@ -397,7 +435,8 @@ void init_mouse(void) {
     int86(0x33, &regs, &regs);
 }
 
-int poll_mouse(int *x, int *y) {
+int poll_mouse(int *x, int *y)
+{
     union REGS regs;
     regs.x.ax = 0x03;
     int86(0x33, &regs, &regs);
@@ -406,6 +445,31 @@ int poll_mouse(int *x, int *y) {
     return regs.x.bx;
 }
 
+void get_palette(
+    unsigned char index, 
+    unsigned char *r, 
+    unsigned char *g, 
+    unsigned char *b
+) {
+    outp(DAC_READ_INDEX, index);
+    *r = inp(DAC_DATA);
+    *g = inp(DAC_DATA);
+    *b = inp(DAC_DATA);
+}
+
+void set_palette(
+    unsigned char index, 
+    unsigned char r, 
+    unsigned char g, 
+    unsigned char b
+) {
+    outp(DAC_WRITE_INDEX, index);
+    outp(DAC_DATA, r);
+    outp(DAC_DATA, g);
+    outp(DAC_DATA, b);
+}
+
+unsigned char r, g, b;
 void flip_pages(void)
 {
     unsigned int temp;
@@ -415,6 +479,7 @@ void flip_pages(void)
     active_page = temp;
 
     while (inp(INPUT_STATUS_1) & VRETRACE);
+    // now not in vblank
     _disable();
     outp(CRTC_INDEX, CRTC_START_ADDR_HI);
     outp(CRTC_INDEX + 1, (visible_page >> 8) & 0xff);
@@ -423,31 +488,63 @@ void flip_pages(void)
     _enable();
 
     while (!(inp(INPUT_STATUS_1) & VRETRACE));
+    // now in vblank
+    //while (inp(INPUT_STATUS_1) & VRETRACE);
+}
+
+void upload_ui_palette(void)
+{
+    int k;
+    for (k = 0; k < NUM_UI_COLORS; k++) {
+        int base = 3 * k;
+        set_palette(FIRST_UI_COLOR + k, ui_colors[base], ui_colors[base + 1], 
+            ui_colors[base + 2]);
+    }
+}
+
+void draw_snes_palette(int x0, int y0, int index)
+{
+    int base = FIRST_SNES_COLOR + (index << 4);
+    int x = x0, k;
+    for (k = 0; k < 16; k++) {
+        fill_rect(x, y0, 6, 6, base + k);
+        x += 8;
+    }
+}
+
+void draw_window(int x, int y, int w, int h)
+{
+    fill_rect(x, y, w, h, CONTENT_COLOR);
+    horizontal_line(x - 1, x + w - 2, y - 1, HIGHLIGHT_COLOR);
+    vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
 int main(void) {
-    int mx, my;
+    int k;
 
     set_mode_x();
     init_mouse();
+    wait_vblank();
+    upload_ui_palette();
 
     while (!kbhit() || getch() != 27) {
-        poll_mouse(&mx, &my);
-        cursor_x = mx;
-        cursor_y = my;
+        poll_mouse(&cursor_x, &cursor_y);
 
         outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
         outp(SEQ_ADDR + 1, 0x0f);
-        _fmemset(&vga[active_page], 0x80, 19200);
-        draw_string("PALETTES", 8, 8);
-        draw_string("hello, crane", 50, 60);
-        draw_string("hello, crane", 50, 70);
-        draw_string("hello, crane", 50, 80);
+        _fmemset(&vga[active_page], BACKGROUND_COLOR, 19200);
 
-        fill_rect(40, 80, 200, 50, 0x27);
+        for (k = 0; k < 8; k++) {
+            draw_char(k + '0', 8, 8 + (k * 8));
+            draw_snes_palette(14, 8 + (k * 8), k);
+        }
 
-        //frame_rect(16, 16, 3, 10, 0x0f);
-        //frame_rect(17, 16, 3, 10, 0x0f);
+        fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+        //draw_window(4, 72, 316, 168);
+        drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
+
+        //fill_rect(100, 100, 50, 50, 0x98);
+        //fill_rect(101, 101, 50, 50, 0xc8);
 
         // do other drawing here
         draw_cursor();
