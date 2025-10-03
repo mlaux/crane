@@ -2,12 +2,14 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "vga.h"
 #include "font.h"
 #include "compat.h"
 #include "palette.h"
 #include "mouse.h"
 #include "cursor.h"
+#include "project.h"
 
 // 16x16 checkerboard for testing
 static const unsigned char example_tile[256] = {
@@ -29,14 +31,22 @@ static const unsigned char example_tile[256] = {
     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
 };
 
-unsigned char r, g, b;
 void upload_ui_palette(void)
 {
     int k;
     for (k = 0; k < NUM_UI_COLORS; k++) {
         int base = 3 * k;
-        set_palette(FIRST_UI_COLOR + k, ui_colors[base], ui_colors[base + 1], 
+        set_palette(FIRST_UI_COLOR + k, ui_colors[base], ui_colors[base + 1],
             ui_colors[base + 2]);
+    }
+}
+
+void upload_project_palette(struct project *proj)
+{
+    int k;
+    for (k = 0; k < NUM_COLORS; k++) {
+        set_palette(FIRST_SNES_COLOR + k, proj->colors[k].r, proj->colors[k].g,
+            proj->colors[k].b);
     }
 }
 
@@ -58,12 +68,26 @@ void draw_window(int x, int y, int w, int h)
 }
 
 int main(void) {
-    int k, x, y;
+    int x, y;
+    static struct project proj;
+
+    if (load_project_binary("juno_r~2.dat", &proj) == 0) {
+        printf("Loaded project: %s\n", proj.name);
+        printf("Tile size: %d\n", proj.tile_size);
+        printf("Number of tiles: %d\n", proj.num_tiles);
+        printf("Press any key to continue...\n");
+        getch();
+    } else {
+        printf("Failed to load project\n");
+        printf("Press any key to continue...\n");
+        getch();
+    }
 
     set_mode_x();
     init_mouse();
     wait_vblank();
     upload_ui_palette();
+    upload_project_palette(&proj);
 
     draw_window(4, 4, 44, 224);
     draw_sprite_aligned_16x16(example_tile, 8, 8);

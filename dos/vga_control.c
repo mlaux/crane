@@ -4,6 +4,7 @@
 
 #include "compat.h"
 #include "vga.h"
+#include "palette.h"
 
 extern unsigned char far *vga;
 
@@ -145,7 +146,7 @@ void set_mode_x(void)
     outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
     outp(SEQ_ADDR + 1, 0x0f);
 
-    _fmemset(vga, 0x80, 0x8000);
+    _fmemset(vga, BACKGROUND_COLOR, 0x8000);
     // _fmemset(&vga[0x8000], 0x60, 0x8000);
 }
 
