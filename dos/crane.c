@@ -106,24 +106,24 @@ static const unsigned char ui_colors[] = {
 #define FIRST_SNES_COLOR 0x80
 
 // 16x16 checkerboard for testing
-// unsigned char cursor_sprite[CURSOR_WIDTH * CURSOR_HEIGHT] = {
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-//     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-//     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-// };
+static const unsigned char example_tile[256] = {
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+};
 
 void set_mode(unsigned char mode)
 {
@@ -362,8 +362,7 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
     start_offset = active_page + sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
 
     for (plane = 0; plane < 4; plane++) {
-        outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-        outp(SEQ_ADDR + 1, 1 << plane);
+        outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
 
         offset = start_offset;
         in_offset = 0;
@@ -378,6 +377,34 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
                 }
             }
             in_offset += width;
+            offset += SCREEN_WIDTH >> 2;
+        }
+    }
+}
+
+void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy)
+{
+    int y, plane;
+    unsigned int offset, start_offset;
+    const unsigned char *in_ptr;
+
+    start_offset = active_page + sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
+
+        in_ptr = data + plane;
+        offset = start_offset;
+        for (y = 0; y < 16; y++) {
+            unsigned int row_offset = offset;
+            int x;
+            for (x = 0; x < 4; x++) {
+                if (*in_ptr != 0) {
+                    vga[row_offset] = *in_ptr;
+                }
+                in_ptr += 4;
+                row_offset++;
+            }
             offset += SCREEN_WIDTH >> 2;
         }
     }
@@ -520,7 +547,7 @@ void draw_window(int x, int y, int w, int h)
 }
 
 int main(void) {
-    int k;
+    int k, x, y;
 
     set_mode_x();
     init_mouse();
@@ -537,6 +564,12 @@ int main(void) {
         for (k = 0; k < 8; k++) {
             draw_char(k + '0', 8, 8 + (k * 8));
             draw_snes_palette(14, 8 + (k * 8), k);
+        }
+
+        for (y = 0; y < 8; y++) { 
+            for (x = 0; x < 8; x++) {
+                draw_sprite_aligned_16x16(example_tile, 8 + x * 16, 80 + y * 16);
+            }
         }
 
         fill_rect(0, 232, 320, 8, CONTENT_COLOR);
