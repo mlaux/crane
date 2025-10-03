@@ -7,6 +7,9 @@ const unsigned char ui_colors[] = {
     14, 14, 28, // BACKGROUND_COLOR this is stock color 0x80
     8, 8, 16,   // CONTENT_COLOR 0xc8
     20, 20, 28, // HIGHLIGHT_COLOR 0x98
+    0x3c, 0x2c, 0x24, // CURSOR_FISH_BODY
+    0x3a, 0x20, 0x10, // CURSOR_FISH_OUTLINE
+    0x30, 0x16, 0x06, // CURSOR_FISH_SHADOW
 };
 
 void get_palette(

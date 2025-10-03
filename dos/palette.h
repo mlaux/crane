@@ -11,16 +11,22 @@
 // 80-ff are SNES palettes 0-7, converted from RGB565 to RGB666
 //         (red and blue scaled by 2)
 
-#define NUM_UI_COLORS 3
+#define NUM_UI_COLORS 6
 
 #define FIRST_UI_COLOR 0x1
 #define BACKGROUND_COLOR 0x1
 #define CONTENT_COLOR 0x2
 #define HIGHLIGHT_COLOR 0x3
+#define CURSOR_FISH_BODY 0x4
+#define CURSOR_FISH_OUTLINE 0x5
+#define CURSOR_FISH_SHADOW 0x6
+
+#define B 0x10
+#define W 0x1f
 
 #define FIRST_SNES_COLOR 0x80
 
-extern const unsigned char ui_colors[9];
+extern const unsigned char ui_colors[3 * NUM_UI_COLORS];
 
 void get_palette(
     unsigned char index, 

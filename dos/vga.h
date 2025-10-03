@@ -34,7 +34,35 @@
 #define DAC_WRITE_INDEX 0x3c8
 #define DAC_DATA 0x3c9
 
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 240
+
 void set_mode(unsigned char);
+
 void set_mode_x(void);
+
+void wait_vblank(void);
+
+void put_pixel(int x, int y, unsigned char color);
+
+unsigned char get_pixel(int x, int y);
+
+void horizontal_line(int x0, int x1, int y, unsigned char color);
+
+void vertical_line(int x, int y0, int y1, unsigned char color);
+
+void frame_rect(int x0, int y0, int width, int height, unsigned char color);
+
+void fill_rect(int x0, int y0, int width, int height, unsigned char color);
+
+void drawf(int x, int y, const char *fmt, ...);
+
+void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height);
+
+void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy);
+
+void draw_char(unsigned char uch, int x, int y);
+
+void draw_string(const char *str, int x, int y);
 
 #endif

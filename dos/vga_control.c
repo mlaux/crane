@@ -148,3 +148,9 @@ void set_mode_x(void)
     _fmemset(vga, 0x80, 0x8000);
     // _fmemset(&vga[0x8000], 0x60, 0x8000);
 }
+
+void wait_vblank(void)
+{
+    while(inp(INPUT_STATUS_1) & VRETRACE);
+    while(!(inp(INPUT_STATUS_1) & VRETRACE));
+}
