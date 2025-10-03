@@ -21,8 +21,6 @@ unsigned char cursor_buffer[CURSOR_WIDTH * CURSOR_HEIGHT];
 int cursor_x = SCREEN_WIDTH / 2;
 int cursor_y = SCREEN_HEIGHT / 2;
 int cursor_visible = 0;
-unsigned int visible_page = 0;
-unsigned int active_page = 0x8000;
 
 #define B 0x10
 #define W 0x1f
@@ -66,15 +64,13 @@ void wait_vblank(void)
 
 void put_pixel(int x, int y, unsigned char color)
 {
-    unsigned int offset;
     if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
         return;
     }
     // outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
     // outp(SEQ_ADDR + 1, 1 << (x & 3));
     outpw(SEQ_ADDR, 1 << ((x & 3) + 8) | SEQ_REG_MAP_MASK);
-    offset = active_page + (y << 6) + (y << 4) + (x >> 2);
-    vga[offset] = color;
+    vga[(y << 6) + (y << 4) + (x >> 2)] = color;
 }
 
 void horizontal_line(int x0, int x1, int y, unsigned char color)
@@ -83,7 +79,7 @@ void horizontal_line(int x0, int x1, int y, unsigned char color)
     int last_byte = x1 >> 2;
     int left_mask = 0x0f << (x0 & 3);
     int right_mask = 0x0f >> (3 - (x1 & 3));
-    int offset = active_page + (y << 6) + (y << 4) + first_byte;
+    int offset = (y << 6) + (y << 4) + first_byte;
     int x;
 
     if (first_byte == last_byte) {
@@ -104,12 +100,11 @@ void horizontal_line(int x0, int x1, int y, unsigned char color)
 void vertical_line(int x, int y0, int y1, unsigned char color)
 {
     int x_plane = 1 << (x & 3);
-    int y, offset;
+    int y;
 
     outpw(SEQ_ADDR, x_plane << 8 | SEQ_REG_MAP_MASK);
     for (y = y0; y < y1; y++) {
-        offset = active_page + (y << 6) + (y << 4) + (x >> 2);
-        vga[offset] = color;
+        vga[(y << 6) + (y << 4) + (x >> 2)] = color;
     }
 }
 
@@ -144,13 +139,12 @@ void fill_rect(int x0, int y0, int width, int height, unsigned char color)
 }
 
 unsigned char get_pixel(int x, int y) {
-    unsigned int offset;
-    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
         return 0;
-    offset = y * (SCREEN_WIDTH >> 2) + (x >> 2);
+    }
     outp(GC_INDEX, GC_READ_MAP);
     outp(GC_INDEX + 1, x & 3);
-    return vga[offset];
+    return vga[(y << 6) + (y << 4) + (x >> 2)];
 }
 
 void save_cursor_background(void) {
@@ -206,7 +200,7 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
     unsigned int offset, in_offset, start_offset;
     int bytes_per_row = (width >> 2) + (start_plane != 0);
 
-    start_offset = active_page + sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+    start_offset = sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
 
     for (plane = 0; plane < 4; plane++) {
         outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
@@ -235,7 +229,7 @@ void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy)
     unsigned int offset, start_offset;
     const unsigned char *in_ptr;
 
-    start_offset = active_page + sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+    start_offset = sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
 
     for (plane = 0; plane < 4; plane++) {
         outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
@@ -320,28 +314,6 @@ int poll_mouse(int *x, int *y)
 }
 
 unsigned char r, g, b;
-void flip_pages(void)
-{
-    unsigned int temp;
-
-    temp = visible_page;
-    visible_page = active_page;
-    active_page = temp;
-
-    while (inp(INPUT_STATUS_1) & VRETRACE);
-    // now not in vblank
-    _disable();
-    outp(CRTC_INDEX, CRTC_START_ADDR_HI);
-    outp(CRTC_INDEX + 1, (visible_page >> 8) & 0xff);
-    outp(CRTC_INDEX, CRTC_START_ADDR_LO);
-    outp(CRTC_INDEX + 1, visible_page & 0xff);
-    _enable();
-
-    while (!(inp(INPUT_STATUS_1) & VRETRACE));
-    // now in vblank
-    //while (inp(INPUT_STATUS_1) & VRETRACE);
-}
-
 void upload_ui_palette(void)
 {
     int k;
@@ -377,22 +349,27 @@ int main(void) {
     wait_vblank();
     upload_ui_palette();
 
-    while (!kbhit() || getch() != 27) {
-        poll_mouse(&cursor_x, &cursor_y);
+    for (k = 0; k < 8; k++) {
+        draw_char(k + '0', 8, 8 + (k * 8));
+        draw_snes_palette(14, 8 + (k * 8), k);
+    }
 
-        outp(SEQ_ADDR, SEQ_REG_MAP_MASK);
-        outp(SEQ_ADDR + 1, 0x0f);
-        _fmemset(&vga[active_page], BACKGROUND_COLOR, 19200);
-
-        for (k = 0; k < 8; k++) {
-            draw_char(k + '0', 8, 8 + (k * 8));
-            draw_snes_palette(14, 8 + (k * 8), k);
+    for (y = 0; y < 16; y++) { 
+        for (x = 0; x < 14; x++) {
+            draw_sprite_aligned_16x16(example_tile, 8 + x * 16, 80 + y * 16);
         }
+    }
+    save_cursor_background();
 
-        for (y = 0; y < 8; y++) { 
-            for (x = 0; x < 8; x++) {
-                draw_sprite_aligned_16x16(example_tile, 8 + x * 16, 80 + y * 16);
-            }
+    while (!kbhit() || getch() != 27) {
+        poll_mouse(&x, &y);
+        wait_vblank();
+        if (x != cursor_x || y != cursor_y) {
+            restore_cursor_background();
+            cursor_x = x;
+            cursor_y = y;
+            save_cursor_background();
+            draw_cursor();
         }
 
         fill_rect(0, 232, 320, 8, CONTENT_COLOR);
@@ -401,11 +378,6 @@ int main(void) {
 
         //fill_rect(100, 100, 50, 50, 0x98);
         //fill_rect(101, 101, 50, 50, 0xc8);
-
-        // do other drawing here
-        draw_cursor();
-
-        flip_pages();
     }
 
     set_mode(0x03);
