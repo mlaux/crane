@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 {
     int x, y, k;
     static struct project proj;
-    static unsigned char editor_bg_buffer[136 * 136];
+    static unsigned char editor_bg_buffer[137 * 137];
 
     new_project(&proj);
 
