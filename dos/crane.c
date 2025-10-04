@@ -82,6 +82,17 @@ void draw_project_tile(struct tile *tile, int x, int y, int tile_size)
     draw_sprite(translated, x, y, tile_size, tile_size);
 }
 
+void draw_tile_library(struct project *proj)
+{
+    int k;
+    draw_window(4, 4, 44, 224);
+    for (k = 0; k < proj->num_tiles && k < 20; k++) {
+        int tx = 8 + (k & 1) * 20;
+        int ty = 8 + (k >> 1) * 20;
+        draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size);
+    }
+}
+
 void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer)
 {
     int window_size = tile_size * 8 + 8;
@@ -168,12 +179,7 @@ int main(int argc, char *argv[])
     upload_project_palette(&proj);
 
     // tile library
-    draw_window(4, 4, 44, 224);
-    for (k = 0; k < proj.num_tiles && k < 20; k++) {
-        int tx = 8 + (k & 1) * 20;
-        int ty = 8 + (k >> 1) * 20;
-        draw_project_tile(&proj.tiles[k], tx, ty, proj.tile_size);
-    }
+    draw_tile_library(&proj);
 
     // main background editor area
     draw_window(52, 4, 264, 232);
@@ -181,7 +187,7 @@ int main(int argc, char *argv[])
 
     // status bar
     fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-    drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
+    drawf(4, 233, "(%d, %d) %s", cursor_x, cursor_y, proj.name);
 
     // active palette
     draw_char('0', 180, 233);
