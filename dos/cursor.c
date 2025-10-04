@@ -23,23 +23,24 @@ static const unsigned char cursor_fish[CURSOR_WIDTH * CURSOR_HEIGHT] = {
     0, 0, 0, 0, CURSOR_FISH_OUTLINE, 0, 0, 0,
 };
 
-void save_cursor_background(void) {
+void save_background(int x0, int y0, int w, int h, unsigned char *buffer)
+{
     int x, y, plane;
-    int start_plane = cursor_x & 3;
+    int start_plane = x0 & 3;
     int offset, start_offset, out_offset = 0;
-    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
+    int bytes_per_row = (w >> 2) + (start_plane != 0);
 
-    start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
+    start_offset = y0 * (SCREEN_WIDTH >> 2) + (x0 >> 2);
 
-    for(plane = 0; plane < 4; plane++) {
+    for (plane = 0; plane < 4; plane++) {
         outpw(GC_INDEX, plane << 8 | GC_READ_MAP);
 
         offset = start_offset;
-        for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < bytes_per_row; x++) {
+        for (y = 0; y < h; y++) {
+            for (x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
-                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
-                    cursor_buffer[out_offset++] = vga[offset + x];
+                if (sprite_x >= 0 && sprite_x < w) {
+                    buffer[out_offset++] = vga[offset + x];
                 }
             }
             offset += SCREEN_WIDTH >> 2;
@@ -47,28 +48,39 @@ void save_cursor_background(void) {
     }
 }
 
-void restore_cursor_background(void) {
+void restore_background(int x0, int y0, int w, int h, unsigned char *buffer)
+{
     int x, y, plane;
-    int start_plane = cursor_x & 3;
+    int start_plane = x0 & 3;
     int offset, start_offset, in_offset = 0;
-    int bytes_per_row = (CURSOR_WIDTH >> 2) + (start_plane != 0);
+    int bytes_per_row = (w >> 2) + (start_plane != 0);
 
-    start_offset = cursor_y * (SCREEN_WIDTH >> 2) + (cursor_x >> 2);
+    start_offset = y0 * (SCREEN_WIDTH >> 2) + (x0 >> 2);
 
-    for(plane = 0; plane < 4; plane++) {
+    for (plane = 0; plane < 4; plane++) {
         outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
 
         offset = start_offset;
-        for(y = 0; y < CURSOR_HEIGHT; y++) {
-            for(x = 0; x < bytes_per_row; x++) {
+        for (y = 0; y < h; y++) {
+            for (x = 0; x < bytes_per_row; x++) {
                 int sprite_x = (x << 2) + plane - start_plane;
-                if(sprite_x >= 0 && sprite_x < CURSOR_WIDTH) {
-                    vga[offset + x] = cursor_buffer[in_offset++];
+                if (sprite_x >= 0 && sprite_x < w) {
+                    vga[offset + x] = buffer[in_offset++];
                 }
             }
             offset += SCREEN_WIDTH >> 2;
         }
     }
+}
+
+void save_cursor_background(void)
+{
+    save_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
+}
+
+void restore_cursor_background(void)
+{
+    restore_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
 }
 
 void draw_cursor(void)

@@ -82,6 +82,36 @@ void draw_project_tile(struct tile *tile, int x, int y)
     draw_sprite_aligned_16x16(translated, x, y);
 }
 
+void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer)
+{
+    int window_size = tile_size * 8 + 8;
+    int x0 = (320 - window_size) / 2;
+    int y0 = (240 - window_size) / 2;
+    int px, py, k;
+    int base = FIRST_SNES_COLOR + (tile->preview_palette << 4);
+
+    save_background(x0 - 1, y0 - 1, window_size + 1, window_size + 1, bg_buffer);
+    draw_window(x0, y0, window_size, window_size);
+
+    k = 0;
+    for (py = 0; py < tile_size; py++) {
+        for (px = 0; px < tile_size; px++) {
+            int color = base + tile->pixels[k];
+            fill_rect(x0 + 4 + px * 8, y0 + 4 + py * 8, 8, 8, color);
+            k++;
+        }
+    }
+}
+
+void close_tile_editor(int tile_size, unsigned char *bg_buffer)
+{
+    int window_size = tile_size * 8 + 8;
+    int x0 = (320 - window_size) / 2;
+    int y0 = (240 - window_size) / 2;
+
+    restore_background(x0 - 1, y0 - 1, window_size + 1, window_size + 1, bg_buffer);
+}
+
 void draw_project_background(struct project *proj, int x0, int y0)
 {
     static unsigned char translated[256];
@@ -92,9 +122,9 @@ void draw_project_background(struct project *proj, int x0, int y0)
 
     for (y = 0; y < tiles_y && y < 32; y++) {
         for (x = 0; x < tiles_x && x < 32; x++) {
-            int tile_idx = proj->background.tiles[y + 18][x];
+            int tile_idx = proj->background.tiles[y + 0][x];
             if (tile_idx >= 0) {
-                int pal_idx = proj->background.palettes[y + 18][x];
+                int pal_idx = proj->background.palettes[y + 0][x];
                 struct tile *tile = &proj->tiles[tile_idx];
                 int base = FIRST_SNES_COLOR + (pal_idx << 4);
 
@@ -119,6 +149,7 @@ int main(int argc, char *argv[])
 {
     int x, y, k;
     static struct project proj;
+    static unsigned char editor_bg_buffer[136 * 136];
 
     new_project(&proj);
 
@@ -159,7 +190,7 @@ int main(int argc, char *argv[])
     save_cursor_background();
 
     while (!kbhit() || getch() != 27) {
-        poll_mouse(&x, &y);
+        int buttons = poll_mouse(&x, &y);
         wait_vblank();
         fill_rect(0, 232, 55, 8, CONTENT_COLOR);
         drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
@@ -170,7 +201,28 @@ int main(int argc, char *argv[])
             save_cursor_background();
             draw_cursor();
         }
+
+        if (buttons & 1) {
+            for (k = 0; k < proj.num_tiles && k < 20; k++) {
+                int tx = 8 + (k & 1) * 20;
+                int ty = 8 + (k >> 1) * 20;
+                if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
+                    restore_cursor_background();
+                    draw_tile_editor(&proj.tiles[k], proj.tile_size, editor_bg_buffer);
+                    while (poll_mouse(&x, &y) & 1);
+                    while (!(poll_mouse(&x, &y) & 1) && !kbhit());
+                    if (kbhit() && getch() == 27) {
+                        goto exit_loop;
+                    }
+                    close_tile_editor(proj.tile_size, editor_bg_buffer);
+                    save_cursor_background();
+                    draw_cursor();
+                    break;
+                }
+            }
+        }
     }
+exit_loop:
 
     set_mode(0x03);
     return 0;
