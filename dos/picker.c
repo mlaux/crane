@@ -241,7 +241,6 @@ int main(void) {
 
                 exact_h_360 = (int) ((mouse_x_rel * 360L) / (HS_GRID_W * HS_CELL_SIZE));
                 exact_s_100 = (int) ((mouse_y_rel * 100L) / (HS_GRID_H * HS_CELL_SIZE));
-                exact_l_100 = (approx_l * 100) / 15;
 
                 color = hsl_360_to_rgb(exact_h_360, exact_s_100, exact_l_100);
                 current_r = color.r;
