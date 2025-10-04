@@ -8,7 +8,7 @@
 #define NUM_COLORS 128
 
 struct tile {
-    unsigned char size;
+    unsigned char unused;
     unsigned char preview_palette;
     unsigned char pixels[256];
 };
@@ -95,7 +95,7 @@ static int load_tiles(cJSON *tiles_array, struct project *proj) {
             continue;
         }
 
-        proj->tiles[k].size = proj->tile_size;
+        proj->tiles[k].unused = 0;
 
         palette_obj = cJSON_GetObjectItem(tile_obj, "palette");
         if (palette_obj) {
@@ -276,7 +276,7 @@ static int save_binary(const char *filename, struct project *proj) {
     }
 
     for (k = 0; k < MAX_TILES; k++) {
-        write_u8(fp, proj->tiles[k].size);
+        write_u8(fp, proj->tiles[k].unused);
         write_u8(fp, proj->tiles[k].preview_palette);
         fwrite(proj->tiles[k].pixels, 256, 1, fp);
     }

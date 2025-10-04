@@ -1,1 +1,5 @@
 index.html
+.DS_Store
+*.o
+*.exe
+.vscode

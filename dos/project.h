@@ -6,7 +6,7 @@
 #define NUM_COLORS 128
 
 struct tile {
-    unsigned char size;
+    unsigned char unused;
     unsigned char preview_palette;
     unsigned char pixels[256];
 };
@@ -30,6 +30,8 @@ struct project {
     struct tile tiles[MAX_TILES];
     struct background background;
 };
+
+void new_project(struct project *proj);
 
 int load_project_binary(const char *filename, struct project *proj);
 

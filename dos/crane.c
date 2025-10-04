@@ -11,6 +11,9 @@
 #include "cursor.h"
 #include "project.h"
 
+extern unsigned char far *vga;
+
+/*
 // 16x16 checkerboard for testing
 static const unsigned char example_tile[256] = {
     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
@@ -30,6 +33,7 @@ static const unsigned char example_tile[256] = {
     B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
     W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
 };
+*/
 
 void upload_ui_palette(void)
 {
@@ -67,17 +71,58 @@ void draw_window(int x, int y, int w, int h)
     vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
-int main(void) {
-    int x, y;
+void draw_project_tile(struct tile *tile, int x, int y)
+{
+    static unsigned char translated[256];
+    int base = FIRST_SNES_COLOR + (tile->preview_palette << 4);
+    int k;
+    for (k = 0; k < 256; k++) {
+        translated[k] = base + tile->pixels[k];
+    }
+    draw_sprite_aligned_16x16(translated, x, y);
+}
+
+void draw_project_background(struct project *proj, int x0, int y0)
+{
+    static unsigned char translated[256];
+    int x, y, k;
+    int tile_size = proj->tile_size;
+    int tiles_x = 256 / tile_size;
+    int tiles_y = 224 / tile_size;
+
+    for (y = 0; y < tiles_y && y < 32; y++) {
+        for (x = 0; x < tiles_x && x < 32; x++) {
+            int tile_idx = proj->background.tiles[y + 18][x];
+            if (tile_idx >= 0) {
+                int pal_idx = proj->background.palettes[y + 18][x];
+                struct tile *tile = &proj->tiles[tile_idx];
+                int base = FIRST_SNES_COLOR + (pal_idx << 4);
+
+                for (k = 0; k < 256; k++) {
+                    translated[k] = base + tile->pixels[k];
+                }
+
+                draw_sprite_aligned_16x16(translated, x0 + x * tile_size, y0 + y * tile_size);
+            } else {
+                fill_rect(
+                    x0 + x * tile_size + (tile_size >> 1) - 1, 
+                    y0 + y * tile_size + (tile_size >> 1) - 1, 
+                    2, 2, 
+                    HIGHLIGHT_COLOR
+                );
+            }
+        }
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    int x, y, k;
     static struct project proj;
 
-    if (load_project_binary("juno_r~2.dat", &proj) == 0) {
-        printf("Loaded project: %s\n", proj.name);
-        printf("Tile size: %d\n", proj.tile_size);
-        printf("Number of tiles: %d\n", proj.num_tiles);
-        printf("Press any key to continue...\n");
-        getch();
-    } else {
+    new_project(&proj);
+
+    if (argc > 1 && load_project_binary(argv[1], &proj) != 0) {
         printf("Failed to load project\n");
         printf("Press any key to continue...\n");
         getch();
@@ -87,28 +132,31 @@ int main(void) {
     init_mouse();
     wait_vblank();
     upload_ui_palette();
+    _fmemset(vga, BACKGROUND_COLOR, 0x8000);
+    wait_vblank();
     upload_project_palette(&proj);
 
+    // tile library
     draw_window(4, 4, 44, 224);
-    draw_sprite_aligned_16x16(example_tile, 8, 8);
-    draw_sprite_aligned_16x16(example_tile, 28, 8);
-
-    draw_window(52, 4, 264, 232);
-
-    for (y = 0; y < 14; y++) { 
-        for (x = 0; x < 16; x++) {
-            draw_sprite_aligned_16x16(example_tile, 56 + x * 16, 8 + y * 16);
-        }
+    for (k = 0; k < proj.num_tiles && k < 20; k++) {
+        int tx = 8 + (k & 1) * 20;
+        int ty = 8 + (k >> 1) * 20;
+        draw_project_tile(&proj.tiles[k], tx, ty);
     }
 
+    // main background editor area
+    draw_window(52, 4, 264, 232);
+    draw_project_background(&proj, 56, 8);
+
+    // status bar
     fill_rect(0, 232, 320, 8, CONTENT_COLOR);
     drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
 
+    // active palette
     draw_char('0', 180, 233);
     draw_snes_palette(188, 233, 0);
 
     save_cursor_background();
-    draw_cursor();
 
     while (!kbhit() || getch() != 27) {
         poll_mouse(&x, &y);
