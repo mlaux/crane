@@ -43,6 +43,11 @@ int load_project_binary(const char *filename, struct project *proj)
         return -1;
     }
 
+    fread(proj->id, 8, 1, fp);
+    if (strcmp("crprj01", proj->id)) {
+        return -1;
+    }
+
     fread(proj->name, 64, 1, fp);
     proj->tile_size = read_u8(fp);
     proj->num_tiles = read_u16(fp);

@@ -23,6 +23,7 @@ struct rgb {
 };
 
 struct project {
+    char id[8];
     char name[MAX_PROJECT_NAME];
     unsigned char tile_size;
     int num_tiles;

@@ -71,7 +71,7 @@ void draw_window(int x, int y, int w, int h)
     vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
-void draw_project_tile(struct tile *tile, int x, int y)
+void draw_project_tile(struct tile *tile, int x, int y, int tile_size)
 {
     static unsigned char translated[256];
     int base = FIRST_SNES_COLOR + (tile->preview_palette << 4);
@@ -79,7 +79,7 @@ void draw_project_tile(struct tile *tile, int x, int y)
     for (k = 0; k < 256; k++) {
         translated[k] = base + tile->pixels[k];
     }
-    draw_sprite_aligned_16x16(translated, x, y);
+    draw_sprite(translated, x, y, tile_size, tile_size);
 }
 
 void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer)
@@ -132,7 +132,7 @@ void draw_project_background(struct project *proj, int x0, int y0)
                     translated[k] = base + tile->pixels[k];
                 }
 
-                draw_sprite_aligned_16x16(translated, x0 + x * tile_size, y0 + y * tile_size);
+                draw_sprite(translated, x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size);
             } else {
                 fill_rect(
                     x0 + x * tile_size + (tile_size >> 1) - 1, 
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
     for (k = 0; k < proj.num_tiles && k < 20; k++) {
         int tx = 8 + (k & 1) * 20;
         int ty = 8 + (k >> 1) * 20;
-        draw_project_tile(&proj.tiles[k], tx, ty);
+        draw_project_tile(&proj.tiles[k], tx, ty, proj.tile_size);
     }
 
     // main background editor area

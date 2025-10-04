@@ -25,6 +25,7 @@ struct rgb {
 };
 
 struct project {
+    char id[8];
     char name[MAX_PROJECT_NAME];
     unsigned char tile_size;
     int num_tiles;
@@ -200,6 +201,8 @@ static int load_json(const char *filename, struct project *proj) {
         return -1;
     }
 
+    strcpy(proj->id, "crprj01");
+
     name = cJSON_GetObjectItem(root, "name");
     if (name && name->valuestring) {
         strncpy(proj->name, name->valuestring, MAX_PROJECT_NAME - 1);
@@ -265,6 +268,7 @@ static int save_binary(const char *filename, struct project *proj) {
         return -1;
     }
 
+    fwrite(proj->id, 8, 1, fp);
     fwrite(proj->name, MAX_PROJECT_NAME, 1, fp);
     write_u8(fp, proj->tile_size);
     write_u16(fp, (unsigned short)proj->num_tiles);
