@@ -47,18 +47,28 @@ struct rgb hsl_to_rgb(int h, int s, int l) {
     long c, x, m;
     long r1, g1, b1;
     int h_sector;
+    int use_h;
 
     if (s == 0) {
         result.r = result.g = result.b = (l * 63) / 100;
         return result;
     }
-
-    c = (l < 50) ? (l * s * 2) / 100 : ((100 - l) * s * 2) / 100;
+    
+    if (l < 50) {
+        c = (l * s * 2) / 100;
+    } else {
+        c = ((100 - l) * s * 2) / 100;
+    }
 
     h_sector = h / 60;
 
-    x = (c * (60 - ((h_sector & 1) ? (h % 60) : (60 - (h % 60))))) / 60;
+    if (h_sector & 1) {
+        use_h = (h % 60);
+    } else {
+        use_h = (60 - (h % 60));
+    }
 
+    x = (c * (60 - use_h)) / 60;
     m = l - c / 2;
 
     switch (h_sector) {
@@ -106,6 +116,8 @@ void draw_hs_grid_dithered(void) {
 
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
+            // this is kind of dumb because there aren't enough pixels in the picker
+            // to take advantage of all the bayer patterns, but scale it up anyway
             // (x * 255) / 127 = 0-255
             // (y * 223) / 111 = 0-223
             int grid_x_16 = (x * (HS_GRID_W * 16 - 1)) / (total_w - 1);
