@@ -24,15 +24,12 @@
 #define INFO_X 70
 #define INFO_Y 140
 
-static int approx_h = 0;  // 0-15
-static int approx_s = 13; // 0-13
-static int approx_l = 7;  // 0-15
-static int current_r = 0; // 0-63
-static int current_g = 0; // 0-63
-static int current_b = 0; // 0-63
-static int exact_h_360 = 0;
-static int exact_s_100 = 86;
-static int exact_l_100 = 50;
+static int cur_r = 0; // 0-63
+static int cur_g = 0; // 0-63
+static int cur_b = 0; // 0-63
+static int cur_h = 0;
+static int cur_s = 86;
+static int cur_l = 50;
 
 struct rgb {
     unsigned char r, g, b;
@@ -46,46 +43,6 @@ void set_palette_entry(unsigned char index, unsigned char r, unsigned char g, un
 }
 
 struct rgb hsl_to_rgb(int h, int s, int l) {
-    struct rgb result;
-    int c, x, m;
-    int r1, g1, b1;
-    int h_sector, h_frac;
-
-    if (s == 0) {
-        result.r = result.g = result.b = (l * 63) / 15;
-        return result;
-    }
-
-    c = (l < 8) ? (l * s * 2) / 15 : ((15 - l) * s * 2) / 15;
-
-    h_sector = (h * 6) / 16;
-    h_frac = (h * 6) % 16;
-
-    if (h_sector & 1) {
-        x = (c * (16 - h_frac)) / 16;
-    } else {
-        x = (c * h_frac) / 16;
-    }
-
-    m = l - c / 2;
-
-    switch (h_sector) {
-        case 0: r1 = c; g1 = x; b1 = 0; break;
-        case 1: r1 = x; g1 = c; b1 = 0; break;
-        case 2: r1 = 0; g1 = c; b1 = x; break;
-        case 3: r1 = 0; g1 = x; b1 = c; break;
-        case 4: r1 = x; g1 = 0; b1 = c; break;
-        default: r1 = c; g1 = 0; b1 = x; break;
-    }
-
-    result.r = ((r1 + m) * 63) / 15;
-    result.g = ((g1 + m) * 63) / 15;
-    result.b = ((b1 + m) * 63) / 15;
-
-    return result;
-}
-
-struct rgb hsl_360_to_rgb(int h, int s, int l) {
     struct rgb result;
     long c, x, m;
     long r1, g1, b1;
@@ -121,15 +78,47 @@ struct rgb hsl_360_to_rgb(int h, int s, int l) {
 }
 
 void generate_hs_grid(int l) {
-    int h, s, k, s_scaled;
+    int h, s, k, h_scaled, s_scaled;
+    struct rgb color;
 
     k = 0;
     for (s = 0; s < HS_GRID_H; s++) {
-        s_scaled = (s * 15) / 13;
+        s_scaled = (s * 100) / (HS_GRID_H - 1);
         for (h = 0; h < HS_GRID_W; h++) {
-            struct rgb color = hsl_to_rgb(h, s_scaled, l);
+            h_scaled = (h * 360) / (HS_GRID_W - 1);
+            color = hsl_to_rgb(h_scaled, s_scaled, l);
             set_palette_entry(0x20 + k, color.r, color.g, color.b);
             k++;
+        }
+    }
+}
+
+void draw_hs_grid_dithered(void) {
+    int x, y;
+
+    for (y = 0; y < HS_GRID_H * HS_CELL_SIZE; y++) {
+        int s_cell = y / HS_CELL_SIZE;
+        int s_sub = y % HS_CELL_SIZE;
+
+        for (x = 0; x < HS_GRID_W * HS_CELL_SIZE; x++) {
+            int h_cell = x / HS_CELL_SIZE;
+            int h_sub = x % HS_CELL_SIZE;
+            int h_use, s_use;
+            unsigned char color;
+
+            h_use = h_cell;
+            s_use = s_cell;
+
+            if (h_sub >= HS_CELL_SIZE / 2 && ((x ^ y) & 1) && h_cell < HS_GRID_W - 1) {
+                h_use = h_cell + 1;
+            }
+
+            if (s_sub >= HS_CELL_SIZE / 2 && ((x ^ y) & 1) && s_cell < HS_GRID_H - 1) {
+                s_use = s_cell + 1;
+            }
+
+            color = 0x20 + s_use * HS_GRID_W + h_use;
+            put_pixel(HS_GRID_X + x, HS_GRID_Y + y, color);
         }
     }
 }
@@ -138,29 +127,29 @@ void generate_lightness_slider(int h, int s) {
     int l;
 
     for (l = 0; l < L_SLIDER_STEPS; l++) {
-        struct rgb color = hsl_to_rgb(h, s, l);
+        int l_scaled = (l * 100) / (L_SLIDER_STEPS - 1);
+        struct rgb color = hsl_to_rgb(h, s, l_scaled);
         set_palette_entry(0x10 + l, color.r, color.g, color.b);
     }
 }
 
 void update_preview_color(void) {
-    set_palette_entry(0x01, current_r, current_g, current_b);
+    set_palette_entry(0x01, cur_r, cur_g, cur_b);
 }
 
 unsigned int get_snes_bgr555(void) {
-    unsigned int r5 = current_r >> 1;
-    unsigned int g5 = current_g >> 1;
-    unsigned int b5 = current_b >> 1;
+    unsigned int r5 = cur_r >> 1;
+    unsigned int g5 = cur_g >> 1;
+    unsigned int b5 = cur_b >> 1;
     return (b5 << 10) | (g5 << 5) | r5;
 }
 
 void draw_color_info(void) {
-    fill_rect(INFO_X, INFO_Y, 120, 32, 0);
+    fill_rect(INFO_X, INFO_Y, 80, 24, 0);
 
-    drawf(INFO_X, INFO_Y, "HSL: %d,%d,%d", approx_h, approx_s, approx_l);
-    drawf(INFO_X, INFO_Y + 8, "HSL: %d,%d,%d", exact_h_360, exact_s_100, exact_l_100);
-    drawf(INFO_X, INFO_Y + 16, "RGB: %d,%d,%d", current_r, current_g, current_b);
-    drawf(INFO_X, INFO_Y + 24, "SNES: $%04x", get_snes_bgr555());
+    drawf(INFO_X, INFO_Y, "HSL: %d,%d,%d", cur_h, cur_s, cur_l);
+    drawf(INFO_X, INFO_Y + 8, "RGB: %d,%d,%d", cur_r, cur_g, cur_b);
+    drawf(INFO_X, INFO_Y + 16, "SNES: $%04x", get_snes_bgr555());
 }
 
 extern int cursor_x, cursor_y;
@@ -174,31 +163,21 @@ int main(void) {
     init_mouse();
 
     /* initialize current RGB from initial HSL */
-    exact_h_360 = (approx_h * 360) / 16;
-    exact_s_100 = (approx_s * 100) / 13;
-    exact_l_100 = (approx_l * 100) / 15;
-    initial_color = hsl_360_to_rgb(exact_h_360, exact_s_100, exact_l_100);
-    current_r = initial_color.r;
-    current_g = initial_color.g;
-    current_b = initial_color.b;
+    initial_color = hsl_to_rgb(cur_h, cur_s, cur_l);
+    cur_r = initial_color.r;
+    cur_g = initial_color.g;
+    cur_b = initial_color.b;
 
     /* generate initial palettes */
-    generate_hs_grid(approx_l);
-    generate_lightness_slider(approx_h, approx_s);
+    generate_hs_grid(cur_l);
+    generate_lightness_slider(cur_h, cur_s);
     update_preview_color();
 
     /* clear screen */
     fill_rect(0, 0, 320, 240, 0);
 
     /* draw HS rectangle */
-    for (k = 0; k < HS_GRID_H * HS_GRID_W; k++) {
-        int grid_x = k % HS_GRID_W;
-        int grid_y = k / HS_GRID_W;
-        int x = HS_GRID_X + grid_x * HS_CELL_SIZE;
-        int y = HS_GRID_Y + grid_y * HS_CELL_SIZE;
-        unsigned char color = 0x20 + k;
-        fill_rect(x, y, HS_CELL_SIZE, HS_CELL_SIZE, color);
-    }
+    draw_hs_grid_dithered();
 
     /* draw lightness slider */
     for (k = 0; k < L_SLIDER_STEPS; k++) {
@@ -228,7 +207,7 @@ int main(void) {
 
         if (buttons & 1) {
             if (mouse_x >= HS_GRID_X && mouse_x < HS_GRID_X + HS_GRID_W * HS_CELL_SIZE &&
-                mouse_y >= HS_GRID_Y && mouse_y < HS_GRID_Y + HS_GRID_H * HS_CELL_SIZE) {
+                mouse_y >= HS_GRID_Y && mouse_y <= HS_GRID_Y + HS_GRID_H * HS_CELL_SIZE) {
                 long mouse_x_rel = mouse_x - HS_GRID_X;
                 long mouse_y_rel = mouse_y - HS_GRID_Y;
 
@@ -236,54 +215,34 @@ int main(void) {
                 int grid_y = mouse_y_rel / HS_CELL_SIZE;
                 struct rgb color;
 
-                approx_h = grid_x;
-                approx_s = (grid_y * 15) / 13;
+                cur_h = (int) ((mouse_x_rel * 360L) / (HS_GRID_W * HS_CELL_SIZE));
+                cur_s = (int) ((mouse_y_rel * 100L) / (HS_GRID_H * HS_CELL_SIZE));
 
-                exact_h_360 = (int) ((mouse_x_rel * 360L) / (HS_GRID_W * HS_CELL_SIZE));
-                exact_s_100 = (int) ((mouse_y_rel * 100L) / (HS_GRID_H * HS_CELL_SIZE));
-
-                color = hsl_360_to_rgb(exact_h_360, exact_s_100, exact_l_100);
-                current_r = color.r;
-                current_g = color.g;
-                current_b = color.b;
+                color = hsl_to_rgb(cur_h, cur_s, cur_l);
+                cur_r = color.r;
+                cur_g = color.g;
+                cur_b = color.b;
 
                 update_preview_color();
                 draw_color_info();
-                generate_lightness_slider(approx_h, approx_s);
-
-                for (k = 0; k < L_SLIDER_STEPS; k++) {
-                    int y = L_SLIDER_Y + k * L_CELL_SIZE;
-                    unsigned char c = 0x10 + k;
-                    fill_rect(L_SLIDER_X, y, L_CELL_SIZE, L_CELL_SIZE, c);
-                }
+                generate_lightness_slider(cur_h, cur_s);
             }
 
             if (mouse_x >= L_SLIDER_X && mouse_x < L_SLIDER_X + L_CELL_SIZE &&
-                mouse_y >= L_SLIDER_Y && mouse_y < L_SLIDER_Y + L_SLIDER_STEPS * L_CELL_SIZE) {
+                mouse_y >= L_SLIDER_Y && mouse_y <= L_SLIDER_Y + L_SLIDER_STEPS * L_CELL_SIZE) {
                 int slider_y = (mouse_y - L_SLIDER_Y) / L_CELL_SIZE;
                 struct rgb color;
 
-                approx_l = slider_y;
+                cur_l = ((mouse_y - L_SLIDER_Y) * 100) / (L_SLIDER_STEPS * L_CELL_SIZE);
 
-                exact_l_100 = ((mouse_y - L_SLIDER_Y) * 100) / (L_SLIDER_STEPS * L_CELL_SIZE);
-
-                color = hsl_360_to_rgb(exact_h_360, exact_s_100, exact_l_100);
-                current_r = color.r;
-                current_g = color.g;
-                current_b = color.b;
+                color = hsl_to_rgb(cur_h, cur_s, cur_l);
+                cur_r = color.r;
+                cur_g = color.g;
+                cur_b = color.b;
 
                 update_preview_color();
                 draw_color_info();
-                generate_hs_grid(approx_l);
-
-                for (k = 0; k < HS_GRID_H * HS_GRID_W; k++) {
-                    int grid_x = k % HS_GRID_W;
-                    int grid_y = k / HS_GRID_W;
-                    int x = HS_GRID_X + grid_x * HS_CELL_SIZE;
-                    int y = HS_GRID_Y + grid_y * HS_CELL_SIZE;
-                    unsigned char c = 0x20 + k;
-                    fill_rect(x, y, HS_CELL_SIZE, HS_CELL_SIZE, c);
-                }
+                generate_hs_grid(cur_l);
             }
         }
 
