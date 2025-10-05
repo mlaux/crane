@@ -103,12 +103,10 @@ void generate_hs_grid(int l) {
     }
 }
 
-void draw_hs_grid_dithered(void) {
-    static const unsigned char bayer[4][4] = {
-        { 0,  8,  2, 10},
-        {12,  4, 14,  6},
-        { 3, 11,  1,  9},
-        {15,  7, 13,  5}
+void draw_hs_grid(void) {
+    static const unsigned char bayer[2][2] = {
+        { 0, 2 },
+        { 3, 1 },
     };
     int x, y;
     int total_w = HS_GRID_W * HS_CELL_SIZE;
@@ -116,20 +114,16 @@ void draw_hs_grid_dithered(void) {
 
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
-            // this is kind of dumb because there aren't enough pixels in the picker
-            // to take advantage of all the bayer patterns, but scale it up anyway
-            // (x * 255) / 127 = 0-255
-            // (y * 223) / 111 = 0-223
-            int grid_x_16 = (x * (HS_GRID_W * 16 - 1)) / (total_w - 1);
-            int grid_y_16 = (y * (HS_GRID_H * 16 - 1)) / (total_h - 1);
+            int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
+            int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
 
-            int h_cell = grid_x_16 >> 4;
-            int s_cell = grid_y_16 >> 4;
-            int h_frac = grid_x_16 & 15;
-            int s_frac = grid_y_16 & 15;
+            int h_cell = grid_x_4 >> 2;
+            int s_cell = grid_y_4 >> 2;
+            int h_frac = grid_x_4 & 3;
+            int s_frac = grid_y_4 & 3;
 
-            int bayer_x = x & 3;
-            int bayer_y = y & 3;
+            int bayer_x = x & 1;
+            int bayer_y = y & 1;
             int threshold = bayer[bayer_y][bayer_x];
 
             int h_use = h_cell;
@@ -160,24 +154,22 @@ void generate_lightness_slider(int h, int s) {
     }
 }
 
-void draw_lightness_slider_dithered(void) {
-    static const unsigned char bayer[4][4] = {
-        { 0,  8,  2, 10},
-        {12,  4, 14,  6},
-        { 3, 11,  1,  9},
-        {15,  7, 13,  5}
+void draw_lightness_slider(void) {
+    static const unsigned char bayer[2][2] = {
+        { 0, 2 },
+        { 3, 1 },
     };
     int x, y;
     int total_h = L_SLIDER_STEPS * L_CELL_SIZE;
 
     for (y = 0; y < total_h; y++) {
-        int grid_y_16 = (y * (L_SLIDER_STEPS * 16 - 1)) / (total_h - 1);
-        int l_cell = grid_y_16 >> 4;
-        int l_frac = grid_y_16 & 15;
+        int grid_y_16 = (y * (L_SLIDER_STEPS * 4 - 1)) / (total_h - 1);
+        int l_cell = grid_y_16 >> 2;
+        int l_frac = grid_y_16 & 3;
 
         for (x = 0; x < L_CELL_SIZE; x++) {
-            int bayer_x = x & 3;
-            int bayer_y = y & 3;
+            int bayer_x = x & 1;
+            int bayer_y = y & 1;
             int threshold = bayer[bayer_y][bayer_x];
             int l_use = l_cell;
             unsigned char color;
@@ -213,12 +205,8 @@ void draw_color_info(void) {
 
 void handle_hs_click(int mouse_x, int mouse_y)
 {
-
     long mouse_x_rel = mouse_x - HS_GRID_X;
     long mouse_y_rel = mouse_y - HS_GRID_Y;
-
-    int grid_x = mouse_x_rel / HS_CELL_SIZE;
-    int grid_y = mouse_y_rel / HS_CELL_SIZE;
     struct rgb color;
 
     cur_h = (int) ((mouse_x_rel * 360L) / (HS_GRID_W * HS_CELL_SIZE));
@@ -255,7 +243,6 @@ extern int cursor_x, cursor_y;
 
 int main(void) {
     int mouse_x, mouse_y, buttons;
-    int k;
     struct rgb initial_color;
 
     set_mode_x();
@@ -275,20 +262,16 @@ int main(void) {
     /* clear screen */
     fill_rect(0, 0, 320, 240, 0);
 
-    /* draw HS rectangle */
-    draw_hs_grid_dithered();
-
-    /* draw lightness slider */
-    draw_lightness_slider_dithered();
+    draw_hs_grid();
+    draw_lightness_slider();
 
     /* draw preview */
     fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, 0x01);
 
-    /* draw color info */
     draw_color_info();
 
     save_cursor_background();
-    /* event loop */
+
     while (1) {
         buttons = poll_mouse(&mouse_x, &mouse_y);
         wait_vblank();
