@@ -10,6 +10,7 @@
 #include "mouse.h"
 #include "cursor.h"
 #include "project.h"
+#include "picker.h"
 
 extern unsigned char far *vga;
 
@@ -71,7 +72,7 @@ void draw_window(int x, int y, int w, int h)
     vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
-void draw_project_tile(struct tile *tile, int x, int y, int tile_size)
+void draw_project_tile(struct tile *tile, int x, int y, int tile_size, int mute)
 {
     static unsigned char translated[256];
     int base = FIRST_SNES_COLOR + (tile->preview_palette << 4);
@@ -79,17 +80,21 @@ void draw_project_tile(struct tile *tile, int x, int y, int tile_size)
     for (k = 0; k < 256; k++) {
         translated[k] = base + tile->pixels[k];
     }
-    draw_sprite(translated, x, y, tile_size, tile_size);
+    if (mute) {
+        fill_rect(x, y, tile_size, tile_size, HIGHLIGHT_COLOR);
+    } else {
+        draw_sprite(translated, x, y, tile_size, tile_size);
+    }
 }
 
-void draw_tile_library(struct project *proj)
+void draw_tile_library(struct project *proj, int mute)
 {
     int k;
     draw_window(4, 4, 44, 224);
     for (k = 0; k < proj->num_tiles && k < 20; k++) {
         int tx = 8 + (k & 1) * 20;
         int ty = 8 + (k >> 1) * 20;
-        draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size);
+        draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, mute);
     }
 }
 
@@ -116,14 +121,14 @@ void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer
 
 void close_tile_editor(int tile_size, unsigned char *bg_buffer)
 {
-    int window_size = tile_size * 8 + 8;
-    int x0 = (320 - window_size) / 2;
-    int y0 = (240 - window_size) / 2;
+    int window_size = (tile_size << 3) + 8;
+    int x0 = (320 - window_size) >> 1;
+    int y0 = (240 - window_size) >> 1;
 
     restore_background(x0 - 1, y0 - 1, window_size + 1, window_size + 1, bg_buffer);
 }
 
-void draw_project_background(struct project *proj, int x0, int y0)
+void draw_project_background(struct project *proj, int x0, int y0, int mute)
 {
     static unsigned char translated[256];
     int x, y, k;
@@ -133,9 +138,9 @@ void draw_project_background(struct project *proj, int x0, int y0)
 
     for (y = 0; y < tiles_y && y < 32; y++) {
         for (x = 0; x < tiles_x && x < 32; x++) {
-            int tile_idx = proj->background.tiles[y + 0][x];
+            int tile_idx = proj->background.tiles[y + 18][x];
             if (tile_idx >= 0) {
-                int pal_idx = proj->background.palettes[y + 0][x];
+                int pal_idx = proj->background.palettes[y + 18][x];
                 struct tile *tile = &proj->tiles[tile_idx];
                 int base = FIRST_SNES_COLOR + (pal_idx << 4);
 
@@ -143,7 +148,16 @@ void draw_project_background(struct project *proj, int x0, int y0)
                     translated[k] = base + tile->pixels[k];
                 }
 
-                draw_sprite(translated, x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size);
+                if (mute) {
+                    fill_rect(
+                        x0 + x * tile_size,
+                        y0 + y * tile_size,
+                        tile_size, tile_size, 
+                        HIGHLIGHT_COLOR
+                    );
+                } else {
+                    draw_sprite(translated, x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size);
+                }
             } else {
                 fill_rect(
                     x0 + x * tile_size + (tile_size >> 1) - 1, 
@@ -156,9 +170,41 @@ void draw_project_background(struct project *proj, int x0, int y0)
     }
 }
 
+int rect_contains(int x0, int y0, int w, int h, int x, int y)
+{
+    return x >= x0 && y >= y0 && x < x0 + w && y < y0 + h;
+}
+
+void draw_entire_screen(struct project *proj)
+{
+    outpw(SEQ_ADDR, (0x0f << 8) | SEQ_REG_MAP_MASK);
+    _fmemset(vga, BACKGROUND_COLOR, 0x8000);
+
+    // tile library
+    draw_tile_library(proj, 0);
+
+    // main background editor area
+    draw_window(52, 4, 264, 232);
+    draw_project_background(proj, 56, 8, 0);
+
+    fill_rect(8, 208, 8, 8, HIGHLIGHT_COLOR);
+
+    // status bar
+    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+    drawf(4, 233, "(%d, %d) %s", cursor_x, cursor_y, proj->name);
+
+    // active palette
+    draw_char('0', 180, 233);
+    draw_snes_palette(188, 233, 0);
+
+    save_cursor_background();
+    draw_cursor();
+}
+
 int main(int argc, char *argv[])
 {
     int x, y, k;
+    int buttons = 0, last_buttons = 0, buttons_down = 0;
     static struct project proj;
     static unsigned char editor_bg_buffer[137 * 137];
 
@@ -174,29 +220,15 @@ int main(int argc, char *argv[])
     init_mouse();
     wait_vblank();
     upload_ui_palette();
-    _fmemset(vga, BACKGROUND_COLOR, 0x8000);
     wait_vblank();
     upload_project_palette(&proj);
 
-    // tile library
-    draw_tile_library(&proj);
-
-    // main background editor area
-    draw_window(52, 4, 264, 232);
-    draw_project_background(&proj, 56, 8);
-
-    // status bar
-    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-    drawf(4, 233, "(%d, %d) %s", cursor_x, cursor_y, proj.name);
-
-    // active palette
-    draw_char('0', 180, 233);
-    draw_snes_palette(188, 233, 0);
-
-    save_cursor_background();
+    draw_entire_screen(&proj);
 
     while (!kbhit() || getch() != 27) {
-        int buttons = poll_mouse(&x, &y);
+        buttons = poll_mouse(&x, &y);
+        // buttons_down = buttons ^ last_buttons;
+        // last_buttons = buttons;
         wait_vblank();
         fill_rect(0, 232, 55, 8, CONTENT_COLOR);
         drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
@@ -221,10 +253,20 @@ int main(int argc, char *argv[])
                         goto exit_loop;
                     }
                     close_tile_editor(proj.tile_size, editor_bg_buffer);
-                    save_cursor_background();
-                    draw_cursor();
                     break;
                 }
+            }
+
+            if (rect_contains(8, 208, 8, 8, x, y)) {
+                struct rgb color;
+                restore_cursor_background();
+                draw_tile_library(&proj, 1);
+                draw_window(52, 4, 264, 232);
+                draw_project_background(&proj, 56, 8, 1);
+                fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+                draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
+                color_picker(&color);
+                draw_entire_screen(&proj);
             }
         }
     }

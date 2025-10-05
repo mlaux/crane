@@ -20,6 +20,7 @@
 #define CURSOR_FISH_BODY 0x4
 #define CURSOR_FISH_OUTLINE 0x5
 #define CURSOR_FISH_SHADOW 0x6
+#define COLOR_PICKER_SELECTED_VALUE 0x7
 
 #define B 0x10
 #define W 0x1f

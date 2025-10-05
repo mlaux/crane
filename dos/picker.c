@@ -3,26 +3,31 @@
 #include <i86.h>
 #include "vga.h"
 #include "mouse.h"
+#include "palette.h"
 #include "cursor.h"
+#include "project.h"
+#include "picker.h"
 
-#define HS_GRID_X 20
-#define HS_GRID_Y 20
+#define HS_GRID_X PICKER_X
+#define HS_GRID_Y PICKER_Y
 #define HS_GRID_W 16
 #define HS_GRID_H 14
 #define HS_CELL_SIZE 8
 
-#define L_SLIDER_X 160
-#define L_SLIDER_Y 20
+#define L_SLIDER_X (PICKER_X + 136)
+#define L_SLIDER_Y (PICKER_Y + 8)
 #define L_SLIDER_STEPS 16
 #define L_CELL_SIZE 8
 
-#define PREVIEW_X 20
-#define PREVIEW_Y 140
-#define PREVIEW_W 40
-#define PREVIEW_H 40
+#define PREVIEW_X PICKER_X
+#define PREVIEW_Y (PICKER_Y + 120)
+#define PREVIEW_W 32
+#define PREVIEW_H 24
 
-#define INFO_X 70
-#define INFO_Y 140
+#define INFO_X (PICKER_X + 40)
+#define INFO_Y (PICKER_Y + 120)
+
+extern int cursor_x, cursor_y;
 
 static int cur_r = 0;
 static int cur_g = 0;
@@ -31,18 +36,36 @@ static int cur_h = 0;
 static int cur_s = 50;
 static int cur_l = 50;
 
-struct rgb {
-    unsigned char r, g, b;
-};
+static struct rgb saved_palette[240];
 
-void set_palette_entry(unsigned char index, unsigned char r, unsigned char g, unsigned char b) {
-    outp(DAC_WRITE_INDEX, index);
-    outp(DAC_DATA, r);
-    outp(DAC_DATA, g);
-    outp(DAC_DATA, b);
+static void save_palette(void)
+{
+    int k;
+    for (k = 0x10; k < 0x100; k++) {
+        int index = k - 0x10;
+        get_palette(k, 
+            &saved_palette[index].r, 
+            &saved_palette[index].g, 
+            &saved_palette[index].b
+        );
+    }
 }
 
-struct rgb hsl_to_rgb(int h, int s, int l) {
+static void restore_palette(void)
+{
+    int k;
+    for (k = 0x10; k < 0x100; k++) {
+        int index = k - 0x10;
+        set_palette(k, 
+            saved_palette[index].r, 
+            saved_palette[index].g, 
+            saved_palette[index].b
+        );
+    }
+}
+
+struct rgb hsl_to_rgb(int h, int s, int l)
+{
     struct rgb result;
     long c, x, m;
     long r1, g1, b1;
@@ -87,7 +110,8 @@ struct rgb hsl_to_rgb(int h, int s, int l) {
     return result;
 }
 
-void generate_hs_grid(int l) {
+void generate_hs_grid(int l)
+{
     int h, s, k, h_scaled, s_scaled;
     struct rgb color;
 
@@ -97,64 +121,73 @@ void generate_hs_grid(int l) {
         for (h = 0; h < HS_GRID_W; h++) {
             h_scaled = (h * 360) / (HS_GRID_W - 1);
             color = hsl_to_rgb(h_scaled, s_scaled, l);
-            set_palette_entry(0x20 + k, color.r, color.g, color.b);
+            set_palette(0x20 + k, color.r, color.g, color.b);
             k++;
         }
     }
 }
 
-void draw_hs_grid(void) {
+void draw_hs_grid_px(int x, int y)
+{
     static const unsigned char bayer[2][2] = {
         { 0, 2 },
         { 3, 1 },
     };
-    int x, y;
     int total_w = HS_GRID_W * HS_CELL_SIZE;
     int total_h = HS_GRID_H * HS_CELL_SIZE;
 
+    int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
+    int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
+
+    int h_cell = grid_x_4 >> 2;
+    int s_cell = grid_y_4 >> 2;
+    int h_frac = grid_x_4 & 3;
+    int s_frac = grid_y_4 & 3;
+
+    int threshold = bayer[y & 1][x & 1];
+
+    int h_use = h_cell;
+    int s_use = s_cell;
+    unsigned char color;
+
+    if (h_frac > threshold && h_cell < HS_GRID_W - 1) {
+        h_use = h_cell + 1;
+    }
+
+    if (s_frac > threshold && s_cell < HS_GRID_H - 1) {
+        s_use = s_cell + 1;
+    }
+
+    color = 0x20 + s_use * HS_GRID_W + h_use;
+    put_pixel(HS_GRID_X + x, HS_GRID_Y + y, color);
+}
+
+void draw_hs_grid(void)
+{
+    int total_w = HS_GRID_W * HS_CELL_SIZE;
+    int total_h = HS_GRID_H * HS_CELL_SIZE;
+
+    int x, y;
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
-            int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
-            int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
-
-            int h_cell = grid_x_4 >> 2;
-            int s_cell = grid_y_4 >> 2;
-            int h_frac = grid_x_4 & 3;
-            int s_frac = grid_y_4 & 3;
-
-            int bayer_x = x & 1;
-            int bayer_y = y & 1;
-            int threshold = bayer[bayer_y][bayer_x];
-
-            int h_use = h_cell;
-            int s_use = s_cell;
-            unsigned char color;
-
-            if (h_frac > threshold && h_cell < HS_GRID_W - 1) {
-                h_use = h_cell + 1;
-            }
-
-            if (s_frac > threshold && s_cell < HS_GRID_H - 1) {
-                s_use = s_cell + 1;
-            }
-
-            color = 0x20 + s_use * HS_GRID_W + h_use;
-            put_pixel(HS_GRID_X + x, HS_GRID_Y + y, color);
+            draw_hs_grid_px(x, y);
         }
     }
 }
 
-void generate_lightness_slider(int h, int s) {
+void generate_lightness_slider(int h, int s)
+{
     int l;
 
     for (l = 0; l < L_SLIDER_STEPS; l++) {
         int l_scaled = (l * 100) / (L_SLIDER_STEPS - 1);
         struct rgb color = hsl_to_rgb(h, s, l_scaled);
-        set_palette_entry(0x10 + l, color.r, color.g, color.b);
+        set_palette(0x10 + l, color.r, color.g, color.b);
     }
 }
 
-void draw_lightness_slider(void) {
+void draw_lightness_slider(void)
+{
     static const unsigned char bayer[2][2] = {
         { 0, 2 },
         { 3, 1 },
@@ -168,9 +201,7 @@ void draw_lightness_slider(void) {
         int l_frac = grid_y_16 & 3;
 
         for (x = 0; x < L_CELL_SIZE; x++) {
-            int bayer_x = x & 1;
-            int bayer_y = y & 1;
-            int threshold = bayer[bayer_y][bayer_x];
+            int threshold = bayer[y & 1][x & 1];
             int l_use = l_cell;
             unsigned char color;
 
@@ -184,23 +215,26 @@ void draw_lightness_slider(void) {
     }
 }
 
-void update_preview_color(void) {
-    set_palette_entry(0x01, cur_r, cur_g, cur_b);
+void update_preview_color(void)
+{
+    set_palette(COLOR_PICKER_SELECTED_VALUE, cur_r, cur_g, cur_b);
 }
 
-unsigned int get_snes_bgr555(void) {
-    unsigned int r5 = cur_r >> 1;
-    unsigned int g5 = cur_g >> 1;
-    unsigned int b5 = cur_b >> 1;
+unsigned int get_snes_bgr555(unsigned int r, unsigned int g, unsigned int b)
+{
+    unsigned int r5 = r >> 1;
+    unsigned int g5 = g >> 1;
+    unsigned int b5 = b >> 1;
     return (b5 << 10) | (g5 << 5) | r5;
 }
 
-void draw_color_info(void) {
-    fill_rect(INFO_X, INFO_Y, 80, 24, 0);
+void draw_color_info(void)
+{
+    fill_rect(INFO_X, INFO_Y, 88, 24, CONTENT_COLOR);
 
     drawf(INFO_X, INFO_Y, "HSL: %d,%d,%d", cur_h, cur_s, cur_l);
     drawf(INFO_X, INFO_Y + 8, "RGB: %d,%d,%d", cur_r, cur_g, cur_b);
-    drawf(INFO_X, INFO_Y + 16, "SNES: $%04x", get_snes_bgr555());
+    drawf(INFO_X, INFO_Y + 16, "SNES: $%04x", get_snes_bgr555(cur_r, cur_g, cur_b));
 }
 
 void handle_hs_click(int mouse_x, int mouse_y)
@@ -239,38 +273,31 @@ void handle_l_click(int mouse_y)
     generate_hs_grid(cur_l);
 }
 
-extern int cursor_x, cursor_y;
-
-int main(void) {
+void color_picker(struct rgb *color)
+{
     int mouse_x, mouse_y, buttons;
-    struct rgb initial_color;
+    struct rgb temp_out;
 
-    set_mode_x();
-    init_mouse();
-
-    /* initialize current RGB from initial HSL */
-    initial_color = hsl_to_rgb(cur_h, cur_s, cur_l);
-    cur_r = initial_color.r;
-    cur_g = initial_color.g;
-    cur_b = initial_color.b;
+    cur_r = color->r;
+    cur_g = color->g;
+    cur_b = color->b;
 
     /* generate initial palettes */
+    save_palette();
     generate_hs_grid(cur_l);
     generate_lightness_slider(cur_h, cur_s);
     update_preview_color();
-
-    /* clear screen */
-    fill_rect(0, 0, 320, 240, 0);
 
     draw_hs_grid();
     draw_lightness_slider();
 
     /* draw preview */
-    fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, 0x01);
+    fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_SELECTED_VALUE);
 
     draw_color_info();
 
     save_cursor_background();
+    draw_cursor();
 
     while (1) {
         buttons = poll_mouse(&mouse_x, &mouse_y);
@@ -298,6 +325,31 @@ int main(void) {
         if (kbhit() && getch() == 27)
             break;
     }
+
+    temp_out = hsl_to_rgb(cur_h, cur_s, cur_l);
+    color->r = temp_out.r;
+    color->g = temp_out.g;
+    color->b = temp_out.b;
+    restore_palette();
+}
+
+int standalone_main(void)
+{
+    struct rgb color;
+
+    set_mode_x();
+    init_mouse();
+
+    /* initialize current RGB from initial HSL */
+    color = hsl_to_rgb(cur_h, cur_s, cur_l);
+    cur_r = color.r;
+    cur_g = color.g;
+    cur_b = color.b;
+
+    /* clear screen */
+    fill_rect(0, 0, 320, 240, 0);
+
+    color_picker(&color);
 
     set_mode(0x03);
     return 0;
