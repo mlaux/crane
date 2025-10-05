@@ -24,11 +24,11 @@
 #define INFO_X 70
 #define INFO_Y 140
 
-static int cur_r = 0; // 0-63
-static int cur_g = 0; // 0-63
-static int cur_b = 0; // 0-63
+static int cur_r = 0;
+static int cur_g = 0;
+static int cur_b = 0;
 static int cur_h = 0;
-static int cur_s = 86;
+static int cur_s = 50;
 static int cur_l = 50;
 
 struct rgb {
@@ -83,7 +83,7 @@ void generate_hs_grid(int l) {
 
     k = 0;
     for (s = 0; s < HS_GRID_H; s++) {
-        s_scaled = (s * 100) / (HS_GRID_H - 1);
+        s_scaled = ((HS_GRID_H - 1 - s) * 100) / (HS_GRID_H - 1);
         for (h = 0; h < HS_GRID_W; h++) {
             h_scaled = (h * 360) / (HS_GRID_W - 1);
             color = hsl_to_rgb(h_scaled, s_scaled, l);
@@ -94,26 +94,41 @@ void generate_hs_grid(int l) {
 }
 
 void draw_hs_grid_dithered(void) {
+    static const unsigned char bayer[4][4] = {
+        { 0,  8,  2, 10},
+        {12,  4, 14,  6},
+        { 3, 11,  1,  9},
+        {15,  7, 13,  5}
+    };
     int x, y;
+    int total_w = HS_GRID_W * HS_CELL_SIZE;
+    int total_h = HS_GRID_H * HS_CELL_SIZE;
 
-    for (y = 0; y < HS_GRID_H * HS_CELL_SIZE; y++) {
-        int s_cell = y / HS_CELL_SIZE;
-        int s_sub = y % HS_CELL_SIZE;
+    for (y = 0; y < total_h; y++) {
+        for (x = 0; x < total_w; x++) {
+            // (x * 255) / 127 = 0-255
+            // (y * 223) / 111 = 0-223
+            int grid_x_16 = (x * (HS_GRID_W * 16 - 1)) / (total_w - 1);
+            int grid_y_16 = (y * (HS_GRID_H * 16 - 1)) / (total_h - 1);
 
-        for (x = 0; x < HS_GRID_W * HS_CELL_SIZE; x++) {
-            int h_cell = x / HS_CELL_SIZE;
-            int h_sub = x % HS_CELL_SIZE;
-            int h_use, s_use;
+            int h_cell = grid_x_16 >> 4;
+            int s_cell = grid_y_16 >> 4;
+            int h_frac = grid_x_16 & 15;
+            int s_frac = grid_y_16 & 15;
+
+            int bayer_x = x & 3;
+            int bayer_y = y & 3;
+            int threshold = bayer[bayer_y][bayer_x];
+
+            int h_use = h_cell;
+            int s_use = s_cell;
             unsigned char color;
 
-            h_use = h_cell;
-            s_use = s_cell;
-
-            if (h_sub >= HS_CELL_SIZE / 2 && ((x ^ y) & 1) && h_cell < HS_GRID_W - 1) {
+            if (h_frac > threshold && h_cell < HS_GRID_W - 1) {
                 h_use = h_cell + 1;
             }
 
-            if (s_sub >= HS_CELL_SIZE / 2 && ((x ^ y) & 1) && s_cell < HS_GRID_H - 1) {
+            if (s_frac > threshold && s_cell < HS_GRID_H - 1) {
                 s_use = s_cell + 1;
             }
 
@@ -216,7 +231,7 @@ int main(void) {
                 struct rgb color;
 
                 cur_h = (int) ((mouse_x_rel * 360L) / (HS_GRID_W * HS_CELL_SIZE));
-                cur_s = (int) ((mouse_y_rel * 100L) / (HS_GRID_H * HS_CELL_SIZE));
+                cur_s = 100 - (int) ((mouse_y_rel * 100L) / (HS_GRID_H * HS_CELL_SIZE));
 
                 color = hsl_to_rgb(cur_h, cur_s, cur_l);
                 cur_r = color.r;
