@@ -257,8 +257,7 @@ void handle_hs_click(int mouse_x, int mouse_y)
 }
 
 void handle_l_click(int mouse_y)
-{               
-    int slider_y = (mouse_y - L_SLIDER_Y) / L_CELL_SIZE;
+{
     struct rgb color;
 
     cur_l = ((mouse_y - L_SLIDER_Y) * 100) / (L_SLIDER_STEPS * L_CELL_SIZE);

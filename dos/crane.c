@@ -11,6 +11,7 @@
 #include "cursor.h"
 #include "project.h"
 #include "picker.h"
+#include "export.h"
 
 extern unsigned char far *vga;
 
@@ -96,6 +97,11 @@ void draw_tile_library(struct project *proj, int mute)
         int ty = 8 + (k >> 1) * 20;
         draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, mute);
     }
+    fill_rect(8, 208, 8, 8, HIGHLIGHT_COLOR);
+    fill_rect(18, 208, 8, 8, BUTTON_COLOR);
+    fill_rect(28, 208, 8, 8, BUTTON_COLOR);
+    fill_rect(38, 208, 8, 8, BUTTON_COLOR);
+    fill_rect(8, 218, 8, 8, BUTTON_COLOR);
 }
 
 void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer)
@@ -175,6 +181,16 @@ int rect_contains(int x0, int y0, int w, int h, int x, int y)
     return x >= x0 && y >= y0 && x < x0 + w && y < y0 + h;
 }
 
+void draw_status_bar(const char *text)
+{
+    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+    drawf(4, 233, "(%3d, %3d) %.20s", cursor_x, cursor_y, text);
+
+    // active palette
+    draw_char('0', 180, 233);
+    draw_snes_palette(188, 233, 0);
+}
+
 void draw_entire_screen(struct project *proj)
 {
     outpw(SEQ_ADDR, (0x0f << 8) | SEQ_REG_MAP_MASK);
@@ -190,12 +206,7 @@ void draw_entire_screen(struct project *proj)
     fill_rect(8, 208, 8, 8, HIGHLIGHT_COLOR);
 
     // status bar
-    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-    drawf(4, 233, "(%d, %d) %s", cursor_x, cursor_y, proj->name);
-
-    // active palette
-    draw_char('0', 180, 233);
-    draw_snes_palette(188, 233, 0);
+    draw_status_bar(proj->name);
 
     save_cursor_background();
     draw_cursor();
@@ -204,7 +215,7 @@ void draw_entire_screen(struct project *proj)
 int main(int argc, char *argv[])
 {
     int x, y, k;
-    int buttons = 0, last_buttons = 0, buttons_down = 0;
+    int buttons = 0;
     static struct project proj;
     static unsigned char editor_bg_buffer[137 * 137];
 
@@ -227,11 +238,9 @@ int main(int argc, char *argv[])
 
     while (!kbhit() || getch() != 27) {
         buttons = poll_mouse(&x, &y);
-        // buttons_down = buttons ^ last_buttons;
-        // last_buttons = buttons;
         wait_vblank();
         fill_rect(0, 232, 55, 8, CONTENT_COLOR);
-        drawf(4, 233, "(%d, %d)", cursor_x, cursor_y);
+        drawf(4, 233, "(%3d, %3d)", cursor_x, cursor_y);
         if (x != cursor_x || y != cursor_y) {
             restore_cursor_background();
             cursor_x = x;
@@ -267,6 +276,27 @@ int main(int argc, char *argv[])
                 draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
                 color_picker(&color);
                 draw_entire_screen(&proj);
+            }
+
+            if (rect_contains(18, 208, 8, 8, x, y)) {
+                save_project_binary("PROJECT.DAT", &proj);
+                draw_status_bar("Saved");
+                while (poll_mouse(&x, &y) & 1);
+            }
+
+            if (rect_contains(28, 208, 8, 8, x, y)) {
+                export_palettes(&proj, "EXPORT.PAL");
+                while (poll_mouse(&x, &y) & 1);
+            }
+
+            if (rect_contains(38, 208, 8, 8, x, y)) {
+                export_tiles(&proj, "EXPORT.4BP");
+                while (poll_mouse(&x, &y) & 1);
+            }
+
+            if (rect_contains(8, 218, 8, 8, x, y)) {
+                export_background(&proj, "EXPORT.MAP", 0);
+                while (poll_mouse(&x, &y) & 1);
             }
         }
     }

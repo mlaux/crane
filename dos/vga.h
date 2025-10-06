@@ -57,6 +57,8 @@ void fill_rect(int x0, int y0, int width, int height, unsigned char color);
 
 void drawf(int x, int y, const char *fmt, ...);
 
+void drawf_clear(int x, int y, int bgcolor, const char *fmt, ...);
+
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height);
 
 void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy);

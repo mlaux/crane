@@ -36,4 +36,6 @@ void new_project(struct project *proj);
 
 int load_project_binary(const char *filename, struct project *proj);
 
+int save_project_binary(const char *filename, const struct project *proj);
+
 #endif

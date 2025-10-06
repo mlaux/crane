@@ -1,5 +1,5 @@
 CC=wcl
-CFLAGS=-0 -ms -w4 -ox
+CFLAGS=-0 -mc -w4 -ox
 TARGET=crane.exe
 TEST_EXPORT=test_exp.exe
 # PICKER=picker.exe

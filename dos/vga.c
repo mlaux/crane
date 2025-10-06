@@ -151,6 +151,19 @@ void drawf(int x, int y, const char *fmt, ...)
     draw_string(buf, x, y);
 }
 
+// like drawf but clears the background first
+void drawf_clear(int x, int y, int bgcolor, const char *fmt, ...)
+{
+    char buf[256];
+    int n;
+    va_list args;
+    va_start(args, fmt);
+    n = vsprintf(buf, fmt, args);
+    va_end(args);
+    fill_rect(x - 1, y, 5 * n + 2, 7, bgcolor);
+    draw_string(buf, x, y);
+}
+
 void draw_char(unsigned char uch, int x, int y)
 {
     unsigned short char_index;
