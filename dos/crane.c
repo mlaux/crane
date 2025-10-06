@@ -125,6 +125,14 @@ void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer
     }
 }
 
+int editor_contains(int x, int y, unsigned char tile_size)
+{
+    int window_size = tile_size * 8 + 8;
+    int x0 = (320 - window_size) / 2;
+    int y0 = (240 - window_size) / 2;
+    return x >= x0 && y >= y0 && x < x0 + window_size && y < y0 + window_size;
+}
+
 void close_tile_editor(int tile_size, unsigned char *bg_buffer)
 {
     int window_size = (tile_size << 3) + 8;
@@ -191,6 +199,15 @@ void draw_status_bar(const char *text)
     draw_snes_palette(188, 233, 0);
 }
 
+void move_cursor(int x, int y)
+{
+    restore_cursor_background();
+    cursor_x = x;
+    cursor_y = y;
+    save_cursor_background();
+    draw_cursor();
+}
+
 void draw_entire_screen(struct project *proj)
 {
     outpw(SEQ_ADDR, (0x0f << 8) | SEQ_REG_MAP_MASK);
@@ -212,12 +229,62 @@ void draw_entire_screen(struct project *proj)
     draw_cursor();
 }
 
+void tile_editor(struct tile *tile, unsigned char tile_size)
+{
+    static unsigned char editor_bg_buffer[137 * 137];
+    int x, y;
+
+    draw_tile_editor(tile, tile_size, editor_bg_buffer);
+
+    while (!(poll_mouse(&x, &y) & 1)) {
+        wait_vblank();
+        fill_rect(0, 232, 55, 8, CONTENT_COLOR);
+        drawf(4, 233, "(%3d, %3d)", cursor_x, cursor_y);
+        if (x != cursor_x || y != cursor_y) {
+            move_cursor(x, y);
+        }
+    }
+
+    close_tile_editor(tile_size, editor_bg_buffer);
+
+    if (editor_contains(x, y, tile_size)) {
+        // bc last time it was saved, it was with the editor below it, so when
+        // the mouse is moved after the editor is closed, a little piece of 
+        // the editor is drawn. resave with editor gone. this is still buggy
+        // if the cursor is partially within and partially outside the editor. 
+        // the color picker sidesteps this issue because it redraws the entire
+        // screen when it closes. 
+
+        // TODO a much better solution might be to use a stack of saved cursor
+        // backgrounds, as deep as the number of nested dialogs open. then when
+        // a dialog is closed, the operation would be pop_cursor_background(),
+        // i think.
+        save_cursor_background();
+        draw_cursor();
+    }
+
+    // wait for mouse up
+    while (poll_mouse(&x, &y) & 1);
+}
+
+void handle_tile_clicks(struct project *proj, int x, int y)
+{
+    int k;
+    for (k = 0; k < proj->num_tiles && k < 20; k++) {
+        int tx = 8 + (k & 1) * 20;
+        int ty = 8 + (k >> 1) * 20;
+        if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
+            tile_editor(&proj->tiles[k], proj->tile_size);
+            break;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    int x, y, k;
+    int x, y;
     int buttons = 0;
     static struct project proj;
-    static unsigned char editor_bg_buffer[137 * 137];
 
     new_project(&proj);
 
@@ -242,29 +309,11 @@ int main(int argc, char *argv[])
         fill_rect(0, 232, 55, 8, CONTENT_COLOR);
         drawf(4, 233, "(%3d, %3d)", cursor_x, cursor_y);
         if (x != cursor_x || y != cursor_y) {
-            restore_cursor_background();
-            cursor_x = x;
-            cursor_y = y;
-            save_cursor_background();
-            draw_cursor();
+            move_cursor(x, y);
         }
 
         if (buttons & 1) {
-            for (k = 0; k < proj.num_tiles && k < 20; k++) {
-                int tx = 8 + (k & 1) * 20;
-                int ty = 8 + (k >> 1) * 20;
-                if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
-                    restore_cursor_background();
-                    draw_tile_editor(&proj.tiles[k], proj.tile_size, editor_bg_buffer);
-                    while (poll_mouse(&x, &y) & 1);
-                    while (!(poll_mouse(&x, &y) & 1) && !kbhit());
-                    if (kbhit() && getch() == 27) {
-                        goto exit_loop;
-                    }
-                    close_tile_editor(proj.tile_size, editor_bg_buffer);
-                    break;
-                }
-            }
+            handle_tile_clicks(&proj, x, y);
 
             if (rect_contains(8, 208, 8, 8, x, y)) {
                 struct rgb color = { 51, 1, 34 };
@@ -276,6 +325,7 @@ int main(int argc, char *argv[])
                 draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
                 color_picker(&color);
                 draw_entire_screen(&proj);
+                while (poll_mouse(&x, &y) & 1);
             }
 
             if (rect_contains(18, 208, 8, 8, x, y)) {
