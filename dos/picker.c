@@ -64,7 +64,7 @@ static void restore_palette(void)
     }
 }
 
-struct rgb hsl_to_rgb(int h, int s, int l)
+static struct rgb hsl_to_rgb(int h, int s, int l)
 {
     struct rgb result;
     long c, x, m;
@@ -76,7 +76,7 @@ struct rgb hsl_to_rgb(int h, int s, int l)
         result.r = result.g = result.b = (l * 63) / 100;
         return result;
     }
-    
+
     if (l < 50) {
         c = (l * s * 2) / 100;
     } else {
@@ -110,7 +110,47 @@ struct rgb hsl_to_rgb(int h, int s, int l)
     return result;
 }
 
-void generate_hs_grid(int l)
+static void rgb_to_hsl(struct rgb color, int *h, int *s, int *l)
+{
+    int r = color.r;
+    int g = color.g;
+    int b = color.b;
+    int max_val, min_val, delta;
+
+    max_val = r;
+    if (g > max_val) max_val = g;
+    if (b > max_val) max_val = b;
+
+    min_val = r;
+    if (g < min_val) min_val = g;
+    if (b < min_val) min_val = b;
+
+    *l = ((max_val + min_val) * 100) / (2 * 63);
+
+    delta = max_val - min_val;
+    if (delta == 0) {
+        *h = 0;
+        *s = 0;
+        return;
+    }
+
+    if (*l < 50) {
+        *s = (delta * 100) / (max_val + min_val);
+    } else {
+        *s = (delta * 100) / (2 * 63 - max_val - min_val);
+    }
+
+    if (max_val == r) {
+        *h = ((g - b) * 60) / delta;
+        if (*h < 0) *h += 360;
+    } else if (max_val == g) {
+        *h = ((b - r) * 60) / delta + 120;
+    } else {
+        *h = ((r - g) * 60) / delta + 240;
+    }
+}
+
+static void generate_hs_grid(int l)
 {
     int h, s, k, h_scaled, s_scaled;
     struct rgb color;
@@ -127,7 +167,7 @@ void generate_hs_grid(int l)
     }
 }
 
-void draw_hs_grid_px(int x, int y)
+static void draw_hs_grid_px(int x, int y)
 {
     static const unsigned char bayer[2][2] = {
         { 0, 2 },
@@ -162,7 +202,7 @@ void draw_hs_grid_px(int x, int y)
     put_pixel(HS_GRID_X + x, HS_GRID_Y + y, color);
 }
 
-void draw_hs_grid(void)
+static void draw_hs_grid(void)
 {
     int total_w = HS_GRID_W * HS_CELL_SIZE;
     int total_h = HS_GRID_H * HS_CELL_SIZE;
@@ -175,7 +215,7 @@ void draw_hs_grid(void)
     }
 }
 
-void generate_lightness_slider(int h, int s)
+static void generate_lightness_slider(int h, int s)
 {
     int l;
 
@@ -186,7 +226,7 @@ void generate_lightness_slider(int h, int s)
     }
 }
 
-void draw_lightness_slider(void)
+static void draw_lightness_slider(void)
 {
     static const unsigned char bayer[2][2] = {
         { 0, 2 },
@@ -215,12 +255,12 @@ void draw_lightness_slider(void)
     }
 }
 
-void update_preview_color(void)
+static void update_preview_color(void)
 {
     set_palette(COLOR_PICKER_SELECTED_VALUE, cur_r, cur_g, cur_b);
 }
 
-unsigned int get_snes_bgr555(unsigned int r, unsigned int g, unsigned int b)
+static unsigned int get_snes_bgr555(unsigned int r, unsigned int g, unsigned int b)
 {
     unsigned int r5 = r >> 1;
     unsigned int g5 = g >> 1;
@@ -228,7 +268,7 @@ unsigned int get_snes_bgr555(unsigned int r, unsigned int g, unsigned int b)
     return (b5 << 10) | (g5 << 5) | r5;
 }
 
-void draw_color_info(void)
+static void draw_color_info(void)
 {
     fill_rect(INFO_X, INFO_Y, 88, 24, CONTENT_COLOR);
 
@@ -237,7 +277,7 @@ void draw_color_info(void)
     drawf(INFO_X, INFO_Y + 16, "SNES: $%04x", get_snes_bgr555(cur_r, cur_g, cur_b));
 }
 
-void handle_hs_click(int mouse_x, int mouse_y)
+static void handle_hs_click(int mouse_x, int mouse_y)
 {
     long mouse_x_rel = mouse_x - HS_GRID_X;
     long mouse_y_rel = mouse_y - HS_GRID_Y;
@@ -256,7 +296,7 @@ void handle_hs_click(int mouse_x, int mouse_y)
     generate_lightness_slider(cur_h, cur_s);
 }
 
-void handle_l_click(int mouse_y)
+static void handle_l_click(int mouse_y)
 {
     struct rgb color;
 
@@ -280,6 +320,8 @@ void color_picker(struct rgb *color)
     cur_r = color->r;
     cur_g = color->g;
     cur_b = color->b;
+
+    rgb_to_hsl(*color, &cur_h, &cur_s, &cur_l);
 
     /* generate initial palettes */
     save_palette();

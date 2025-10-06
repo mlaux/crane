@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
             }
 
             if (rect_contains(8, 208, 8, 8, x, y)) {
-                struct rgb color;
+                struct rgb color = { 51, 1, 34 };
                 restore_cursor_background();
                 draw_tile_library(&proj, 1);
                 draw_window(52, 4, 264, 232);
