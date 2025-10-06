@@ -13,6 +13,7 @@ const unsigned char ui_colors[] = {
     0x3f, 0x3f, 0x00, // COLOR_PICKER_SELECTED_VALUE
     0x10, 0x18, 0x20, // BUTTON_COLOR
     0x18, 0x20, 0x28, // BUTTON_HIGHLIGHT
+    0x3f, 0x3f, 0x00, // COLOR_PICKER_INITIAL_VALUE
 };
 
 void get_palette(

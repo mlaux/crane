@@ -11,7 +11,7 @@
 // 80-ff are SNES palettes 0-7, converted from RGB565 to RGB666
 //         (red and blue scaled by 2)
 
-#define NUM_UI_COLORS 9
+#define NUM_UI_COLORS 10
 
 #define FIRST_UI_COLOR 0x1
 #define BACKGROUND_COLOR 0x1
@@ -23,6 +23,7 @@
 #define COLOR_PICKER_SELECTED_VALUE 0x7
 #define BUTTON_COLOR 0x8
 #define BUTTON_HIGHLIGHT 0x9
+#define COLOR_PICKER_INITIAL_VALUE 0xa
 
 #define B 0x10
 #define W 0x1f

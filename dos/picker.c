@@ -21,7 +21,7 @@
 
 #define PREVIEW_X PICKER_X
 #define PREVIEW_Y (PICKER_Y + 120)
-#define PREVIEW_W 32
+#define PREVIEW_W 16
 #define PREVIEW_H 24
 
 #define INFO_X (PICKER_X + 40)
@@ -320,6 +320,7 @@ void color_picker(struct rgb *color)
     cur_r = color->r;
     cur_g = color->g;
     cur_b = color->b;
+    set_palette(COLOR_PICKER_INITIAL_VALUE, cur_r, cur_g, cur_b);
 
     rgb_to_hsl(*color, &cur_h, &cur_s, &cur_l);
 
@@ -333,7 +334,8 @@ void color_picker(struct rgb *color)
     draw_lightness_slider();
 
     /* draw preview */
-    fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_SELECTED_VALUE);
+    fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_INITIAL_VALUE);
+    fill_rect(PREVIEW_X + PREVIEW_W, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_SELECTED_VALUE);
 
     draw_color_info();
 

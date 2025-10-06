@@ -15,6 +15,25 @@
 
 extern unsigned char far *vga;
 
+struct button {
+    int x, y, w, h;
+    void (*on_click)(struct project *);
+};
+
+static void button_color_picker(struct project *);
+static void button_save(struct project *);
+static void button_export_palettes(struct project *);
+static void button_export_tiles(struct project *);
+static void button_export_background(struct project *);
+
+static struct button buttons[] = {
+    { 7, 208, 8, 8, button_color_picker },
+    { 17, 208, 8, 8, button_save },
+    { 27, 208, 8, 8, button_export_palettes },
+    { 37, 208, 8, 8, button_export_tiles },
+    { 7, 218, 8, 8, button_export_background }
+};
+
 static void upload_ui_palette(void)
 {
     int k;
@@ -75,11 +94,15 @@ void draw_tile_library(struct project *proj, int mute)
         int ty = 8 + (k >> 1) * 20;
         draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, mute);
     }
-    fill_rect(8, 208, 8, 8, HIGHLIGHT_COLOR);
-    fill_rect(18, 208, 8, 8, BUTTON_COLOR);
-    fill_rect(28, 208, 8, 8, BUTTON_COLOR);
-    fill_rect(38, 208, 8, 8, BUTTON_COLOR);
-    fill_rect(8, 218, 8, 8, BUTTON_COLOR);
+}
+
+static void draw_buttons(void)
+{
+    int k;
+
+    for (k = 0; k < sizeof(buttons) / sizeof(buttons[0]); k++) {
+        fill_rect(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, BUTTON_COLOR);
+    }
 }
 
 void draw_tile_editor(struct tile *tile, int tile_size, unsigned char *bg_buffer)
@@ -198,12 +221,11 @@ void draw_entire_screen(struct project *proj)
 
     // tile library
     draw_tile_library(proj, 0);
+    draw_buttons();
 
     // main background editor area
     draw_window(52, 4, 264, 232);
     draw_project_background(proj, 56, 8, 0);
-
-    fill_rect(8, 208, 8, 8, HIGHLIGHT_COLOR);
 
     // status bar
     draw_status_bar(proj->name);
@@ -236,31 +258,16 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
         // the editor is drawn. resave with editor gone. this is still buggy
         // if the cursor is partially within and partially outside the editor. 
         // the color picker sidesteps this issue because it redraws the entire
-        // screen when it closes. 
+        // screen when it closes.
 
-        // TODO a much better solution might be to use a stack of saved cursor
-        // backgrounds, as deep as the number of nested dialogs open. then when
-        // a dialog is closed, the operation would be pop_cursor_background(),
-        // i think.
+        // not really sure what the solution is other than redrawing the tiles
+        // intersecting the dialog (which is probably ok)
         save_cursor_background();
         draw_cursor();
     }
 
     // wait for mouse up
     while (poll_mouse(&x, &y) & 1);
-}
-
-void handle_tile_clicks(struct project *proj, int x, int y)
-{
-    int k;
-    for (k = 0; k < proj->num_tiles && k < 20; k++) {
-        int tx = 8 + (k & 1) * 20;
-        int ty = 8 + (k >> 1) * 20;
-        if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
-            tile_editor(&proj->tiles[k], proj->tile_size);
-            break;
-        }
-    }
 }
 
 void invoke_color_picker(struct project *proj)
@@ -283,6 +290,57 @@ void invoke_color_picker(struct project *proj)
     while (poll_mouse(&x, &y) & 1);
 }
 
+static void handle_button_clicks(struct project *proj, int x, int y)
+{
+    int k;
+    for (k = 0; k < sizeof(buttons) / sizeof(buttons[0]); k++) {
+        if (rect_contains(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, x, y)) {
+            buttons[k].on_click(proj);
+            while (poll_mouse(&x, &y) & 1);
+            return;
+        }
+    }
+}
+
+static void handle_tile_clicks(struct project *proj, int x, int y)
+{
+    int k;
+    for (k = 0; k < proj->num_tiles && k < 20; k++) {
+        int tx = 8 + (k & 1) * 20;
+        int ty = 8 + (k >> 1) * 20;
+        if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
+            tile_editor(&proj->tiles[k], proj->tile_size);
+            break;
+        }
+    }
+}
+
+static void button_color_picker(struct project *proj)
+{
+    invoke_color_picker(proj);
+}
+
+static void button_save(struct project *proj)
+{
+    save_project_binary("PROJECT.DAT", proj);
+    draw_status_bar("Saved");
+}
+
+static void button_export_palettes(struct project *proj)
+{
+    export_palettes(proj, "EXPORT.PAL");
+}
+
+static void button_export_tiles(struct project *proj)
+{
+    export_tiles(proj, "EXPORT.4BP");
+}
+
+static void button_export_background(struct project *proj)
+{
+    export_background(proj, "EXPORT.MAP", 0);
+}
+
 int main(int argc, char *argv[])
 {
     int x, y;
@@ -299,9 +357,7 @@ int main(int argc, char *argv[])
 
     set_mode_x();
     init_mouse();
-    wait_vblank();
     upload_ui_palette();
-    wait_vblank();
     upload_project_palette(&proj);
 
     draw_entire_screen(&proj);
@@ -317,37 +373,9 @@ int main(int argc, char *argv[])
 
         if (buttons & 1) {
             handle_tile_clicks(&proj, x, y);
-
-            // TODO make constants for button positions and handle with a loop
-            // struct button { x, y, w, h, void (*on_click)() }
-            // foreach (button) { if (contains) { on_click(); wait for mouse up; } }
-            if (rect_contains(8, 208, 8, 8, x, y)) {
-                invoke_color_picker(&proj);
-            }
-
-            if (rect_contains(18, 208, 8, 8, x, y)) {
-                save_project_binary("PROJECT.DAT", &proj);
-                draw_status_bar("Saved");
-                while (poll_mouse(&x, &y) & 1);
-            }
-
-            if (rect_contains(28, 208, 8, 8, x, y)) {
-                export_palettes(&proj, "EXPORT.PAL");
-                while (poll_mouse(&x, &y) & 1);
-            }
-
-            if (rect_contains(38, 208, 8, 8, x, y)) {
-                export_tiles(&proj, "EXPORT.4BP");
-                while (poll_mouse(&x, &y) & 1);
-            }
-
-            if (rect_contains(8, 218, 8, 8, x, y)) {
-                export_background(&proj, "EXPORT.MAP", 0);
-                while (poll_mouse(&x, &y) & 1);
-            }
+            handle_button_clicks(&proj, x, y);
         }
     }
-exit_loop:
 
     set_mode(0x03);
     return 0;
