@@ -23,6 +23,28 @@ static const unsigned char cursor_fish[CURSOR_WIDTH * CURSOR_HEIGHT] = {
     0, 0, 0, 0, CURSOR_FISH_OUTLINE, 0, 0, 0,
 };
 
+/*
+// 16x16 checkerboard for testing
+static const unsigned char example_tile[256] = {
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
+    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
+};
+*/
+
 void save_background(int x0, int y0, int w, int h, unsigned char *buffer)
 {
     int x, y, plane;

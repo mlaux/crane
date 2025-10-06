@@ -15,29 +15,7 @@
 
 extern unsigned char far *vga;
 
-/*
-// 16x16 checkerboard for testing
-static const unsigned char example_tile[256] = {
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-    B, W, B, W, B, W, B, W, B, W, B, W, B, W, B, W,
-    W, B, W, B, W, B, W, B, W, B, W, B, W, B, W, B,
-};
-*/
-
-void upload_ui_palette(void)
+static void upload_ui_palette(void)
 {
     int k;
     for (k = 0; k < NUM_UI_COLORS; k++) {
@@ -47,7 +25,7 @@ void upload_ui_palette(void)
     }
 }
 
-void upload_project_palette(struct project *proj)
+static void upload_project_palette(struct project *proj)
 {
     int k;
     for (k = 0; k < NUM_COLORS; k++) {
@@ -170,11 +148,16 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
                         HIGHLIGHT_COLOR
                     );
                 } else {
-                    draw_sprite(translated, x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size);
+                    draw_sprite(
+                        translated, 
+                        x0 + x * tile_size, 
+                        y0 + y * tile_size, 
+                        tile_size, tile_size
+                    );
                 }
             } else {
                 fill_rect(
-                    x0 + x * tile_size + (tile_size >> 1) - 1, 
+                    x0 + x * tile_size + (tile_size >> 1) - 1,
                     y0 + y * tile_size + (tile_size >> 1) - 1, 
                     2, 2, 
                     HIGHLIGHT_COLOR
@@ -280,6 +263,26 @@ void handle_tile_clicks(struct project *proj, int x, int y)
     }
 }
 
+void invoke_color_picker(struct project *proj)
+{
+    struct rgb color = { 51, 1, 34 };
+    int x, y;
+    restore_cursor_background();
+
+    // draw "muted" (all solid color) version of tiles and background, because
+    // it needs pretty much the entire palette for the color picker
+    draw_tile_library(proj, 1);
+    draw_window(52, 4, 264, 232);
+    draw_project_background(proj, 56, 8, 1);
+    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+
+    draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
+    color_picker(&color);
+
+    draw_entire_screen(proj);
+    while (poll_mouse(&x, &y) & 1);
+}
+
 int main(int argc, char *argv[])
 {
     int x, y;
@@ -315,17 +318,11 @@ int main(int argc, char *argv[])
         if (buttons & 1) {
             handle_tile_clicks(&proj, x, y);
 
+            // TODO make constants for button positions and handle with a loop
+            // struct button { x, y, w, h, void (*on_click)() }
+            // foreach (button) { if (contains) { on_click(); wait for mouse up; } }
             if (rect_contains(8, 208, 8, 8, x, y)) {
-                struct rgb color = { 51, 1, 34 };
-                restore_cursor_background();
-                draw_tile_library(&proj, 1);
-                draw_window(52, 4, 264, 232);
-                draw_project_background(&proj, 56, 8, 1);
-                fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-                draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
-                color_picker(&color);
-                draw_entire_screen(&proj);
-                while (poll_mouse(&x, &y) & 1);
+                invoke_color_picker(&proj);
             }
 
             if (rect_contains(18, 208, 8, 8, x, y)) {
