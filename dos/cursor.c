@@ -109,3 +109,12 @@ void draw_cursor(void)
 {
     draw_sprite(cursor_fish, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
 }
+
+void move_cursor(int x, int y)
+{
+    restore_cursor_background();
+    cursor_x = x;
+    cursor_y = y;
+    save_cursor_background();
+    draw_cursor();
+}

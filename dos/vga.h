@@ -55,6 +55,8 @@ void frame_rect(int x0, int y0, int width, int height, unsigned char color);
 
 void fill_rect(int x0, int y0, int width, int height, unsigned char color);
 
+void draw_window(int x, int y, int w, int h);
+
 void drawf(int x, int y, const char *fmt, ...);
 
 void drawf_clear(int x, int y, int bgcolor, const char *fmt, ...);

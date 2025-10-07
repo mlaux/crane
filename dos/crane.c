@@ -12,8 +12,11 @@
 #include "project.h"
 #include "picker.h"
 #include "export.h"
+#include "dialog.h"
 
 extern unsigned char far *vga;
+
+static char current_filename[13] = "UNTITLED.DAT";
 
 struct button {
     int x, y, w, h;
@@ -61,13 +64,6 @@ void draw_snes_palette(int x0, int y0, int index)
         fill_rect(x, y0, 6, 6, base + k);
         x += 8;
     }
-}
-
-void draw_window(int x, int y, int w, int h)
-{
-    fill_rect(x, y, w, h, CONTENT_COLOR);
-    horizontal_line(x - 1, x + w - 2, y - 1, HIGHLIGHT_COLOR);
-    vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
 void draw_project_tile(struct tile *tile, int x, int y, int tile_size, int mute)
@@ -205,15 +201,6 @@ void draw_status_bar(const char *text)
     draw_snes_palette(188, 233, 0);
 }
 
-void move_cursor(int x, int y)
-{
-    restore_cursor_background();
-    cursor_x = x;
-    cursor_y = y;
-    save_cursor_background();
-    draw_cursor();
-}
-
 void draw_entire_screen(struct project *proj)
 {
     outpw(SEQ_ADDR, (0x0f << 8) | SEQ_REG_MAP_MASK);
@@ -322,37 +309,76 @@ static void button_color_picker(struct project *proj)
 
 static void button_save(struct project *proj)
 {
-    save_project_binary("PROJECT.DAT", proj);
-    draw_status_bar("Saved");
+    char filename[13];
+    int result;
+    strcpy(filename, current_filename);
+
+    result = modal_text_input("Save project as", filename, 13);
+    if (result) {
+        save_project_binary(filename, proj);
+        strcpy(current_filename, filename);
+    }
+    draw_entire_screen(proj);
+    draw_status_bar(result ? "Saved" : "Cancelled");
 }
 
 static void button_export_palettes(struct project *proj)
 {
-    export_palettes(proj, "EXPORT.PAL");
+    char filename[13];
+    int result;
+    strcpy(filename, "EXPORT.PAL");
+
+    result = modal_text_input("Enter filename for palette export", filename, 13);
+    if (result) {
+        export_palettes(proj, filename);
+    }
+    draw_entire_screen(proj);
+    draw_status_bar(result ? "Exported palettes" : "Cancelled");
 }
 
 static void button_export_tiles(struct project *proj)
 {
-    export_tiles(proj, "EXPORT.4BP");
+    char filename[13];
+    int result;
+    strcpy(filename, "EXPORT.4BP");
+
+    result = modal_text_input("Export tiles as", filename, 13);
+    if (result) {
+        export_tiles(proj, filename);
+    }
+    draw_entire_screen(proj);
+    draw_status_bar(result ? "Exported tiles" : "Cancelled");
 }
 
 static void button_export_background(struct project *proj)
 {
-    export_background(proj, "EXPORT.MAP", 0);
+    char filename[13];
+    int result;
+    strcpy(filename, "EXPORT.MAP");
+
+    result = modal_text_input("Export background as", filename, 13);
+    if (result) {
+        export_background(proj, filename, 0);
+    }
+    draw_entire_screen(proj);
+    draw_status_bar(result ? "Exported background" : "Cancelled");
 }
 
 int main(int argc, char *argv[])
 {
     int x, y;
     int buttons = 0;
+    int load_failed = 0;
     static struct project proj;
 
     new_project(&proj);
 
-    if (argc > 1 && load_project_binary(argv[1], &proj) != 0) {
-        printf("Failed to load project\n");
-        printf("Press any key to continue...\n");
-        getch();
+    if (argc > 1) {
+        strncpy(current_filename, argv[1], 12);
+        current_filename[12] = '\0';
+        if (load_project_binary(argv[1], &proj) != 0) {
+            load_failed = 1;
+        }
     }
 
     set_mode_x();
@@ -361,6 +387,11 @@ int main(int argc, char *argv[])
     upload_project_palette(&proj);
 
     draw_entire_screen(&proj);
+
+    if (load_failed) {
+        modal_info("Failed to load project");
+        draw_entire_screen(&proj);
+    }
 
     while (!kbhit() || getch() != 27) {
         buttons = poll_mouse(&x, &y);

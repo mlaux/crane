@@ -5,6 +5,7 @@
 #include "compat.h"
 #include "vga.h"
 #include "font.h"
+#include "palette.h"
 
 unsigned char far *vga = (unsigned char far *) 0xa0000000L;
 
@@ -81,6 +82,13 @@ void fill_rect(int x0, int y0, int width, int height, unsigned char color)
     for (y = y0; y < y0 + height; y++) {
         horizontal_line(x0, x0 + width - 1, y, color);
     }
+}
+
+void draw_window(int x, int y, int w, int h)
+{
+    fill_rect(x, y, w, h, CONTENT_COLOR);
+    horizontal_line(x - 1, x + w - 2, y - 1, HIGHLIGHT_COLOR);
+    vertical_line(x - 1, y - 1, y + h - 2, HIGHLIGHT_COLOR);
 }
 
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height)

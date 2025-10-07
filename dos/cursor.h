@@ -18,4 +18,6 @@ void restore_cursor_background(void);
 
 void draw_cursor(void);
 
+void move_cursor(int x, int y);
+
 #endif
