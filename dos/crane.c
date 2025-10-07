@@ -227,6 +227,7 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
     int x, y;
 
     draw_tile_editor(tile, tile_size, editor_bg_buffer);
+    while (poll_mouse(&x, &y) & 1);
 
     while (!(poll_mouse(&x, &y) & 1)) {
         wait_vblank();
@@ -253,7 +254,6 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
         draw_cursor();
     }
 
-    // wait for mouse up
     while (poll_mouse(&x, &y) & 1);
 }
 
