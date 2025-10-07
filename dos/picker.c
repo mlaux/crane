@@ -339,18 +339,13 @@ void color_picker(struct rgb *color)
 
     draw_color_info();
 
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     while (1) {
         buttons = poll_mouse(&mouse_x, &mouse_y);
         wait_vblank();
         if (mouse_x != cursor_x || mouse_y != cursor_y) {
-            restore_cursor_background();
-            cursor_x = mouse_x;
-            cursor_y = mouse_y;
-            save_cursor_background();
-            draw_cursor();
+            move_cursor(mouse_x, mouse_y);
         }
 
         if (buttons & 1) {

@@ -12,11 +12,9 @@ void save_background(int x0, int y0, int w, int h, unsigned char *buffer);
 
 void restore_background(int x0, int y0, int w, int h, unsigned char *buffer);
 
-void save_cursor_background(void);
+void show_cursor(void);
 
-void restore_cursor_background(void);
-
-void draw_cursor(void);
+void hide_cursor(void);
 
 void move_cursor(int x, int y);
 

@@ -28,14 +28,48 @@ static void button_save(struct project *);
 static void button_export_palettes(struct project *);
 static void button_export_tiles(struct project *);
 static void button_export_background(struct project *);
+static void button_scroll_up(struct project *);
+static void button_scroll_down(struct project *);
+static void button_scroll_left(struct project *);
+static void button_scroll_right(struct project *);
 
-static struct button buttons[] = {
+static int bg_scroll_x;
+static int bg_scroll_y;
+static int status_x;
+static int status_y;
+
+static struct button tool_buttons[] = {
     { 7, 208, 8, 8, button_color_picker },
     { 17, 208, 8, 8, button_save },
     { 27, 208, 8, 8, button_export_palettes },
     { 37, 208, 8, 8, button_export_tiles },
-    { 7, 218, 8, 8, button_export_background }
+    { 7, 218, 8, 8, button_export_background },
+
+    { 312, 12, 8, 8, button_scroll_up },
+    { 312, 22, 8, 8, button_scroll_down },
+    { 290, 0, 8, 8, button_scroll_left },
+    { 300, 0, 8, 8, button_scroll_right },
 };
+
+int rect_contains(int x0, int y0, int w, int h, int x, int y)
+{
+    return x >= x0 && y >= y0 && x < x0 + w && y < y0 + h;
+}
+
+static void update_status_xy_bg(void)
+{
+    if (rect_contains(56, 8, 256, 224, cursor_x, cursor_y)) {
+        status_x = bg_scroll_x + ((cursor_x - 56) >> 4);
+        status_y = bg_scroll_y + ((cursor_y - 8) >> 4);
+    }
+    fill_rect(0, 232, 40, 8, CONTENT_COLOR);
+    drawf(4, 233, "(%2d, %2d)", status_x, status_y);
+}
+
+static void update_status_xy_editor(void)
+{
+    // TODO
+}
 
 static void upload_ui_palette(void)
 {
@@ -96,8 +130,8 @@ static void draw_buttons(void)
 {
     int k;
 
-    for (k = 0; k < sizeof(buttons) / sizeof(buttons[0]); k++) {
-        fill_rect(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, BUTTON_COLOR);
+    for (k = 0; k < sizeof(tool_buttons) / sizeof(tool_buttons[0]); k++) {
+        fill_rect(tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h, BUTTON_COLOR);
     }
 }
 
@@ -149,9 +183,9 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
 
     for (y = 0; y < tiles_y && y < 32; y++) {
         for (x = 0; x < tiles_x && x < 32; x++) {
-            int tile_idx = proj->background.tiles[y + 18][x];
+            int tile_idx = proj->background.tiles[y + bg_scroll_y][x + bg_scroll_x];
             if (tile_idx >= 0) {
-                int pal_idx = proj->background.palettes[y + 18][x];
+                int pal_idx = proj->background.palettes[y + bg_scroll_y][x + bg_scroll_x];
                 struct tile *tile = &proj->tiles[tile_idx];
                 int base = FIRST_SNES_COLOR + (pal_idx << 4);
 
@@ -176,6 +210,12 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
                 }
             } else {
                 fill_rect(
+                    x0 + x * tile_size,
+                    y0 + y * tile_size,
+                    tile_size, tile_size, 
+                    CONTENT_COLOR
+                );
+                fill_rect(
                     x0 + x * tile_size + (tile_size >> 1) - 1,
                     y0 + y * tile_size + (tile_size >> 1) - 1, 
                     2, 2, 
@@ -186,15 +226,10 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
     }
 }
 
-int rect_contains(int x0, int y0, int w, int h, int x, int y)
-{
-    return x >= x0 && y >= y0 && x < x0 + w && y < y0 + h;
-}
-
 void draw_status_bar(const char *text)
 {
     fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-    drawf(4, 233, "(%3d, %3d) %.20s", cursor_x, cursor_y, text);
+    drawf(4, 233, "(%2d, %2d) %.20s", status_x, status_y, text);
 
     // active palette
     draw_char('0', 180, 233);
@@ -208,7 +243,6 @@ void draw_entire_screen(struct project *proj)
 
     // tile library
     draw_tile_library(proj, 0);
-    draw_buttons();
 
     // main background editor area
     draw_window(52, 4, 264, 232);
@@ -216,39 +250,32 @@ void draw_entire_screen(struct project *proj)
 
     // status bar
     draw_status_bar(proj->name);
+    draw_buttons();
 
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 }
 
 void tile_editor(struct tile *tile, unsigned char tile_size)
 {
     int x, y;
 
-    restore_cursor_background();
+    hide_cursor();
     draw_tile_editor(tile, tile_size, dialog_bg_buffer);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     while (poll_mouse(&x, &y) & 1);
 
     while (!(poll_mouse(&x, &y) & 1)) {
         wait_vblank();
-        fill_rect(0, 232, 55, 8, CONTENT_COLOR);
-        drawf(4, 233, "(%3d, %3d)", cursor_x, cursor_y);
         if (x != cursor_x || y != cursor_y) {
             move_cursor(x, y);
+            update_status_xy_editor();
         }
     }
 
-    // to get back BG in areas that we might not update. this hides the cursor
-    restore_cursor_background();
-    // do the updates
+    hide_cursor();
     close_tile_editor(tile_size, dialog_bg_buffer);
-    // re-save what's there now
-    save_cursor_background();
-    // re-draw
-    draw_cursor();
+    show_cursor();
 
     while (poll_mouse(&x, &y) & 1);
 }
@@ -257,7 +284,7 @@ void invoke_color_picker(struct project *proj)
 {
     struct rgb color = { 51, 1, 34 };
     int x, y;
-    restore_cursor_background();
+    hide_cursor();
 
     // draw "muted" (all solid color) version of tiles and background, because
     // it needs pretty much the entire palette for the color picker
@@ -276,9 +303,9 @@ void invoke_color_picker(struct project *proj)
 static void handle_button_clicks(struct project *proj, int x, int y)
 {
     int k;
-    for (k = 0; k < sizeof(buttons) / sizeof(buttons[0]); k++) {
-        if (rect_contains(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, x, y)) {
-            buttons[k].on_click(proj);
+    for (k = 0; k < sizeof(tool_buttons) / sizeof(tool_buttons[0]); k++) {
+        if (rect_contains(tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h, x, y)) {
+            tool_buttons[k].on_click(proj);
             while (poll_mouse(&x, &y) & 1);
             return;
         }
@@ -356,6 +383,38 @@ static void button_export_background(struct project *proj)
     draw_status_bar(result ? "Exported background" : "Cancelled");
 }
 
+static void button_scroll_up(struct project *proj)
+{
+    if (bg_scroll_y > 0) {
+        bg_scroll_y--;
+        draw_project_background(proj, 56, 8, 0);
+    }
+}
+
+static void button_scroll_down(struct project *proj)
+{
+    if (bg_scroll_y < 18) {
+        bg_scroll_y++;
+        draw_project_background(proj, 56, 8, 0);
+    }
+}
+
+static void button_scroll_left(struct project *proj)
+{
+    if (bg_scroll_x > 0) {
+        bg_scroll_x--;
+        draw_project_background(proj, 56, 8, 0);
+    }
+}
+
+static void button_scroll_right(struct project *proj)
+{
+    if (bg_scroll_x < 16) {
+        bg_scroll_x++;
+        draw_project_background(proj, 56, 8, 0);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int x, y;
@@ -387,10 +446,9 @@ int main(int argc, char *argv[])
     while (!kbhit() || getch() != 27) {
         buttons = poll_mouse(&x, &y);
         wait_vblank();
-        fill_rect(0, 232, 55, 8, CONTENT_COLOR);
-        drawf(4, 233, "(%3d, %3d)", cursor_x, cursor_y);
         if (x != cursor_x || y != cursor_y) {
             move_cursor(x, y);
+            update_status_xy_bg();
         }
 
         if (buttons & 1) {

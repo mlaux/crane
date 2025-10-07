@@ -24,11 +24,10 @@ int modal_text_input(const char *prompt, char *value, int value_len)
     int ok_x = DIALOG_X + DIALOG_WIDTH - 68 + 10 * 5;
     int text_changed = 0;
 
-    restore_cursor_background();
+    hide_cursor();
     save_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
     draw_window(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     while (1) {
         if (kbhit()) {
@@ -96,10 +95,9 @@ int modal_text_input(const char *prompt, char *value, int value_len)
         frame++;
     }
 
-    restore_cursor_background();
+    hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     return result;
 }
@@ -112,13 +110,12 @@ int modal_confirm(const char *message)
     int cancel_x = DIALOG_X + DIALOG_WIDTH - 68;
     int ok_x = DIALOG_X + DIALOG_WIDTH - 68 + 10 * 5;
 
-    restore_cursor_background();
+    hide_cursor();
     save_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
     draw_window(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
     draw_string(message, DIALOG_X + 8, DIALOG_Y + 8);
     draw_string("Cancel    OK", DIALOG_X + DIALOG_WIDTH - 68, DIALOG_Y + 24);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     while (1) {
         if (kbhit()) {
@@ -155,10 +152,9 @@ int modal_confirm(const char *message)
         }
     }
 
-    restore_cursor_background();
+    hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     return result;
 }
@@ -169,13 +165,12 @@ void modal_info(const char *message)
     int button_y = DIALOG_Y + 24;
     int ok_x = DIALOG_X + DIALOG_WIDTH - 18;
 
-    restore_cursor_background();
+    hide_cursor();
     save_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
     draw_window(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
     draw_string(message, DIALOG_X + 8, DIALOG_Y + 8);
     draw_string("OK", DIALOG_X + DIALOG_WIDTH - 18, DIALOG_Y + 24);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 
     while (1) {
         if (kbhit()) {
@@ -202,8 +197,7 @@ void modal_info(const char *message)
         }
     }
 
-    restore_cursor_background();
+    hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 }

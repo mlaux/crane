@@ -95,26 +95,26 @@ void restore_background(int x0, int y0, int w, int h, unsigned char *buffer)
     }
 }
 
-void save_cursor_background(void)
-{
-    save_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
-}
-
-void restore_cursor_background(void)
-{
-    restore_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
-}
-
-void draw_cursor(void)
+static void draw_cursor(void)
 {
     draw_sprite(cursor_fish, cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
 }
 
+void show_cursor(void)
+{
+    save_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
+    draw_cursor();
+}
+
+void hide_cursor(void)
+{
+    restore_background(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT, cursor_buffer);
+}
+
 void move_cursor(int x, int y)
 {
-    restore_cursor_background();
+    hide_cursor();
     cursor_x = x;
     cursor_y = y;
-    save_cursor_background();
-    draw_cursor();
+    show_cursor();
 }
