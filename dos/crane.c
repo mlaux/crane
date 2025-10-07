@@ -223,10 +223,13 @@ void draw_entire_screen(struct project *proj)
 
 void tile_editor(struct tile *tile, unsigned char tile_size)
 {
-    static unsigned char editor_bg_buffer[137 * 137];
     int x, y;
 
-    draw_tile_editor(tile, tile_size, editor_bg_buffer);
+    restore_cursor_background();
+    draw_tile_editor(tile, tile_size, dialog_bg_buffer);
+    save_cursor_background();
+    draw_cursor();
+
     while (poll_mouse(&x, &y) & 1);
 
     while (!(poll_mouse(&x, &y) & 1)) {
@@ -238,21 +241,14 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
         }
     }
 
-    close_tile_editor(tile_size, editor_bg_buffer);
-
-    if (editor_contains(x, y, tile_size)) {
-        // bc last time it was saved, it was with the editor below it, so when
-        // the mouse is moved after the editor is closed, a little piece of 
-        // the editor is drawn. resave with editor gone. this is still buggy
-        // if the cursor is partially within and partially outside the editor. 
-        // the color picker sidesteps this issue because it redraws the entire
-        // screen when it closes.
-
-        // not really sure what the solution is other than redrawing the tiles
-        // intersecting the dialog (which is probably ok)
-        save_cursor_background();
-        draw_cursor();
-    }
+    // to get back BG in areas that we might not update. this hides the cursor
+    restore_cursor_background();
+    // do the updates
+    close_tile_editor(tile_size, dialog_bg_buffer);
+    // re-save what's there now
+    save_cursor_background();
+    // re-draw
+    draw_cursor();
 
     while (poll_mouse(&x, &y) & 1);
 }
@@ -318,7 +314,6 @@ static void button_save(struct project *proj)
         save_project_binary(filename, proj);
         strcpy(current_filename, filename);
     }
-    draw_entire_screen(proj);
     draw_status_bar(result ? "Saved" : "Cancelled");
 }
 
@@ -332,7 +327,6 @@ static void button_export_palettes(struct project *proj)
     if (result) {
         export_palettes(proj, filename);
     }
-    draw_entire_screen(proj);
     draw_status_bar(result ? "Exported palettes" : "Cancelled");
 }
 
@@ -346,7 +340,6 @@ static void button_export_tiles(struct project *proj)
     if (result) {
         export_tiles(proj, filename);
     }
-    draw_entire_screen(proj);
     draw_status_bar(result ? "Exported tiles" : "Cancelled");
 }
 
@@ -360,7 +353,6 @@ static void button_export_background(struct project *proj)
     if (result) {
         export_background(proj, filename, 0);
     }
-    draw_entire_screen(proj);
     draw_status_bar(result ? "Exported background" : "Cancelled");
 }
 
@@ -390,7 +382,6 @@ int main(int argc, char *argv[])
 
     if (load_failed) {
         modal_info("Failed to load project");
-        draw_entire_screen(&proj);
     }
 
     while (!kbhit() || getch() != 27) {
