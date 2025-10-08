@@ -9,6 +9,7 @@
 #include "cursor.h"
 #include "vga.h"
 #include "palette.h"
+#include "icons.h"
 
 static void button_color_picker(struct project *);
 static void button_save(struct project *);
@@ -21,16 +22,16 @@ static void button_scroll_left(struct project *);
 static void button_scroll_right(struct project *);
 
 static struct button tool_buttons[] = {
-    { 7, 208, 8, 8, button_color_picker },
-    { 17, 208, 8, 8, button_save },
-    { 27, 208, 8, 8, button_export_palettes },
-    { 37, 208, 8, 8, button_export_tiles },
-    { 7, 218, 8, 8, button_export_background },
+    { 7, 208, 8, 8, -1, button_color_picker },
+    { 17, 208, 8, 8, -1, button_save },
+    { 27, 208, 8, 8, -1, button_export_palettes },
+    { 37, 208, 8, 8, -1, button_export_tiles },
+    { 7, 218, 8, 8, -1, button_export_background },
 
-    { 312, 12, 8, 8, button_scroll_up },
-    { 312, 22, 8, 8, button_scroll_down },
-    { 290, 0, 8, 8, button_scroll_left },
-    { 300, 0, 8, 8, button_scroll_right },
+    { 312, 12, 8, 8, ICON_SCROLL_UP, button_scroll_up },
+    { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
+    { 290, 0, 8, 8, ICON_SCROLL_LEFT, button_scroll_left },
+    { 300, 0, 8, 8, ICON_SCROLL_RIGHT, button_scroll_right },
 };
 
 void draw_buttons(void)
@@ -39,6 +40,9 @@ void draw_buttons(void)
 
     for (k = 0; k < sizeof(tool_buttons) / sizeof(tool_buttons[0]); k++) {
         fill_rect(tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h, BUTTON_COLOR);
+        if (tool_buttons[k].icon != -1) {
+            draw_sprite(icons[tool_buttons[k].icon], tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h);
+        }
     }
 }
 

@@ -5,6 +5,7 @@
 
 struct button {
     int x, y, w, h;
+    int icon;
     void (*on_click)(struct project *);
 };
 
