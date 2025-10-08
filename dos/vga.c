@@ -261,20 +261,21 @@ void scroll_bg_left(int x0, int y0, int w, int h, int shift)
 
 void scroll_bg_right(int x0, int y0, int w, int h, int shift)
 {
-    int plane, row, byte;
+    int plane, row;
     int bytes_to_copy = (w - shift) >> 2;
+    // needed to not overwrite data that it's copying, because of the direction
+    unsigned char temp_buffer[80];
 
     for (plane = 0; plane < 4; plane++) {
         outpw(GC_INDEX, (plane << 8) | GC_READ_MAP);
         outpw(SEQ_ADDR, ((1 << plane) << 8) | SEQ_REG_MAP_MASK);
 
         for (row = 0; row < h; row++) {
-            int src_base = (y0 + row) * 80 + (x0 >> 2);
-            int dst_base = (y0 + row) * 80 + ((x0 + shift) >> 2);
+            int src_offset = (y0 + row) * 80 + (x0 >> 2);
+            int dst_offset = (y0 + row) * 80 + ((x0 + shift) >> 2);
 
-            for (byte = bytes_to_copy - 1; byte >= 0; byte--) {
-                vga[dst_base + byte] = vga[src_base + byte];
-            }
+            _fmemcpy(temp_buffer, vga + src_offset, bytes_to_copy);
+            _fmemcpy(vga + dst_offset, temp_buffer, bytes_to_copy);
         }
     }
 }
