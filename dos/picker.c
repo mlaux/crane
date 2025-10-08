@@ -180,8 +180,9 @@ static void draw_hs_grid(void)
 
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
-            int grid_x_4 = (x * ((HS_GRID_W << 2) - 1)) / (total_w - 1);
-            int grid_y_4 = (y * ((HS_GRID_H << 2) - 1)) / (total_h - 1);
+            // should be 63/127 and 55/111
+            int grid_x_4 = x >> 1; // (x * ((HS_GRID_W << 2) - 1)) / (total_w - 1);
+            int grid_y_4 = y >> 1; // (y * ((HS_GRID_H << 2) - 1)) / (total_h - 1);
 
             int h_cell = grid_x_4 >> 2;
             int s_cell = grid_y_4 >> 2;
