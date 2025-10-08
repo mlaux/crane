@@ -174,14 +174,14 @@ static void draw_hs_grid(void)
         { 0, 2 },
         { 3, 1 },
     };
-    int total_w = HS_GRID_W * HS_CELL_SIZE;
-    int total_h = HS_GRID_H * HS_CELL_SIZE;
+    const int total_w = HS_GRID_W * HS_CELL_SIZE;
+    const int total_h = HS_GRID_H * HS_CELL_SIZE;
     int x, y;
 
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
-            int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
-            int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
+            int grid_x_4 = (x * ((HS_GRID_W << 2) - 1)) / (total_w - 1);
+            int grid_y_4 = (y * ((HS_GRID_H << 2) - 1)) / (total_h - 1);
 
             int h_cell = grid_x_4 >> 2;
             int s_cell = grid_y_4 >> 2;
@@ -201,7 +201,7 @@ static void draw_hs_grid(void)
                 s_use = s_cell + 1;
             }
 
-            dialog_bg_buffer[y * total_w + x] = 0x20 + s_use * HS_GRID_W + h_use;
+            dialog_bg_buffer[(y << 7) + x] = 0x20 + (s_use << 4) + h_use;
         }
     }
 
@@ -317,20 +317,22 @@ void color_picker(struct rgb *color)
 
     rgb_to_hsl(*color, &cur_h, &cur_s, &cur_l);
 
-    /* generate initial palettes */
     save_palette();
-    generate_hs_grid(cur_l);
+
+    // do this first to give some immediate visual feedback
     generate_lightness_slider(cur_h, cur_s);
     update_preview_color();
 
-    draw_hs_grid();
     draw_lightness_slider();
 
-    /* draw preview */
     fill_rect(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_INITIAL_VALUE);
     fill_rect(PREVIEW_X + PREVIEW_W, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_SELECTED_VALUE);
 
     draw_color_info();
+
+    // this takes longer so do it last
+    generate_hs_grid(cur_l);
+    draw_hs_grid();
 
     show_cursor();
 
