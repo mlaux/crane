@@ -5,4 +5,6 @@ void init_mouse(void);
 
 int poll_mouse(int *x, int *y);
 
+int mouse_buttons_down(void);
+
 #endif

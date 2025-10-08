@@ -23,3 +23,9 @@ int poll_mouse(int *x, int *y)
     *y = regs.x.dx;
     return regs.x.bx;
 }
+
+int mouse_buttons_down(void)
+{
+    int x, y;
+    return poll_mouse(&x, &y);
+}

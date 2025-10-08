@@ -1,4 +1,5 @@
 #include <string.h>
+#include "compat.h"
 #include "actions.h"
 #include "crane.h"
 #include "editor.h"
@@ -10,6 +11,9 @@
 #include "vga.h"
 #include "palette.h"
 #include "icons.h"
+
+#define TIMER_TICKS ((volatile unsigned long far *)0x0040006cL)
+#define SCROLL_DELAY 2
 
 static void button_color_picker(struct project *);
 static void button_save(struct project *);
@@ -145,13 +149,18 @@ static void button_export_background(struct project *proj)
 static void button_scroll_up(struct project *proj)
 {
     int tile_size = proj->tile_size;
+    unsigned long last_tick = 0;
 
-    if (bg_scroll_y > 0) {
-        bg_scroll_y--;
-        hide_cursor();
-        scroll_bg_down(56, 8, 256, 224, tile_size);
-        draw_bg_row(proj, 56, 8, 0);
-        show_cursor();
+    while ((mouse_buttons_down() & 1) && bg_scroll_y > 0) {
+        unsigned long current_tick = *TIMER_TICKS;
+        if (current_tick - last_tick >= SCROLL_DELAY) {
+            bg_scroll_y--;
+            hide_cursor();
+            scroll_bg_down(56, 8, 256, 224, tile_size);
+            draw_bg_row(proj, 56, 8, 0);
+            show_cursor();
+            last_tick = current_tick;
+        }
     }
 }
 
@@ -159,26 +168,36 @@ static void button_scroll_down(struct project *proj)
 {
     int tile_size = proj->tile_size;
     int tiles_y = 224 / tile_size;
+    unsigned long last_tick = 0;
 
-    if (bg_scroll_y < 32 - tiles_y) {
-        bg_scroll_y++;
-        hide_cursor();
-        scroll_bg_up(56, 8, 256, 224, tile_size);
-        draw_bg_row(proj, 56, 8, tiles_y - 1);
-        show_cursor();
+    while ((mouse_buttons_down() & 1) && bg_scroll_y < 32 - tiles_y) {
+        unsigned long current_tick = *TIMER_TICKS;
+        if (current_tick - last_tick >= SCROLL_DELAY) {
+            bg_scroll_y++;
+            hide_cursor();
+            scroll_bg_up(56, 8, 256, 224, tile_size);
+            draw_bg_row(proj, 56, 8, tiles_y - 1);
+            show_cursor();
+            last_tick = current_tick;
+        }
     }
 }
 
 static void button_scroll_left(struct project *proj)
 {
     int tile_size = proj->tile_size;
+    unsigned long last_tick = 0;
 
-    if (bg_scroll_x > 0) {
-        bg_scroll_x--;
-        hide_cursor();
-        scroll_bg_right(56, 8, 256, 224, tile_size);
-        draw_bg_column(proj, 56, 8, 0);
-        show_cursor();
+    while ((mouse_buttons_down() & 1) && bg_scroll_x > 0) {
+        unsigned long current_tick = *TIMER_TICKS;
+        if (current_tick - last_tick >= SCROLL_DELAY) {
+            bg_scroll_x--;
+            hide_cursor();
+            scroll_bg_right(56, 8, 256, 224, tile_size);
+            draw_bg_column(proj, 56, 8, 0);
+            show_cursor();
+            last_tick = current_tick;
+        }
     }
 }
 
@@ -186,12 +205,17 @@ static void button_scroll_right(struct project *proj)
 {
     int tile_size = proj->tile_size;
     int tiles_x = 256 / tile_size;
+    unsigned long last_tick = 0;
 
-    if (bg_scroll_x < 32 - tiles_x) {
-        bg_scroll_x++;
-        hide_cursor();
-        scroll_bg_left(56, 8, 256, 224, tile_size);
-        draw_bg_column(proj, 56, 8, tiles_x - 1);
-        show_cursor();
+    while ((mouse_buttons_down() & 1) && bg_scroll_x < 32 - tiles_x) {
+        unsigned long current_tick = *TIMER_TICKS;
+        if (current_tick - last_tick >= SCROLL_DELAY) {
+            bg_scroll_x++;
+            hide_cursor();
+            scroll_bg_left(56, 8, 256, 224, tile_size);
+            draw_bg_column(proj, 56, 8, tiles_x - 1);
+            show_cursor();
+            last_tick = current_tick;
+        }
     }
 }
