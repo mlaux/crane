@@ -1,5 +1,5 @@
-#ifndef PROJECT_H
-#define PROJECT_H
+#ifndef _PROJECT_H
+#define _PROJECT_H
 
 #define MAX_TILES 100
 #define MAX_PROJECT_NAME 64

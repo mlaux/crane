@@ -6,8 +6,8 @@ TEST_EXPORT=test_exp.exe
 
 all: $(TARGET) # $(PICKER)
 
-$(TARGET): crane.c font.c vga_control.c palette.c vga.c mouse.c cursor.c project.c picker.c export.c dialog.c
-	$(CC) $(CFLAGS) crane.c font.c vga_control.c palette.c vga.c mouse.c cursor.c project.c picker.c export.c dialog.c -fe=$(TARGET)
+$(TARGET): crane.c font.c vga_ctrl.c palette.c vga.c mouse.c cursor.c project.c picker.c export.c dialog.c editor.c actions.c
+	$(CC) $(CFLAGS) crane.c font.c vga_ctrl.c palette.c vga.c mouse.c cursor.c project.c picker.c export.c dialog.c editor.c actions.c -fe=$(TARGET)
 
 # $(PICKER): picker.c vga_control.c vga.c mouse.c font.c cursor.c
 # 	$(CC) $(CFLAGS) picker.c vga_control.c vga.c mouse.c font.c cursor.c -fe=$(PICKER)
