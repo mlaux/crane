@@ -69,4 +69,12 @@ void draw_char(unsigned char uch, int x, int y);
 
 void draw_string(const char *str, int x, int y);
 
+void scroll_bg_up(int x0, int y0, int w, int h, int shift);
+
+void scroll_bg_down(int x0, int y0, int w, int h, int shift);
+
+void scroll_bg_left(int x0, int y0, int w, int h, int shift);
+
+void scroll_bg_right(int x0, int y0, int w, int h, int shift);
+
 #endif

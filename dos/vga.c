@@ -1,6 +1,7 @@
 #include <conio.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "compat.h"
 #include "vga.h"
@@ -202,5 +203,78 @@ void draw_string(const char *str, int x, int y)
         draw_char(*str, x + offset, y);
         offset += font.Width;
         str++;
+    }
+}
+
+void scroll_bg_up(int x0, int y0, int w, int h, int shift)
+{
+    int plane, row;
+    int bytes_per_row = w >> 2;
+    int rows_to_copy = h - shift;
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(GC_INDEX, (plane << 8) | GC_READ_MAP);
+        outpw(SEQ_ADDR, ((1 << plane) << 8) | SEQ_REG_MAP_MASK);
+
+        for (row = 0; row < rows_to_copy; row++) {
+            int src_offset = (y0 + shift + row) * 80 + (x0 >> 2);
+            int dst_offset = (y0 + row) * 80 + (x0 >> 2);
+            _fmemcpy(vga + dst_offset, vga + src_offset, bytes_per_row);
+        }
+    }
+}
+
+void scroll_bg_down(int x0, int y0, int w, int h, int shift)
+{
+    int plane, row;
+    int bytes_per_row = w >> 2;
+    int rows_to_copy = h - shift;
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(GC_INDEX, (plane << 8) | GC_READ_MAP);
+        outpw(SEQ_ADDR, ((1 << plane) << 8) | SEQ_REG_MAP_MASK);
+
+        for (row = rows_to_copy - 1; row >= 0; row--) {
+            int src_offset = (y0 + row) * 80 + (x0 >> 2);
+            int dst_offset = (y0 + shift + row) * 80 + (x0 >> 2);
+            _fmemcpy(vga + dst_offset, vga + src_offset, bytes_per_row);
+        }
+    }
+}
+
+void scroll_bg_left(int x0, int y0, int w, int h, int shift)
+{
+    int plane, row;
+    int bytes_to_copy = (w - shift) >> 2;
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(GC_INDEX, (plane << 8) | GC_READ_MAP);
+        outpw(SEQ_ADDR, ((1 << plane) << 8) | SEQ_REG_MAP_MASK);
+
+        for (row = 0; row < h; row++) {
+            int src_offset = (y0 + row) * 80 + ((x0 + shift) >> 2);
+            int dst_offset = (y0 + row) * 80 + (x0 >> 2);
+            _fmemcpy(vga + dst_offset, vga + src_offset, bytes_to_copy);
+        }
+    }
+}
+
+void scroll_bg_right(int x0, int y0, int w, int h, int shift)
+{
+    int plane, row, byte;
+    int bytes_to_copy = (w - shift) >> 2;
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(GC_INDEX, (plane << 8) | GC_READ_MAP);
+        outpw(SEQ_ADDR, ((1 << plane) << 8) | SEQ_REG_MAP_MASK);
+
+        for (row = 0; row < h; row++) {
+            int src_base = (y0 + row) * 80 + (x0 >> 2);
+            int dst_base = (y0 + row) * 80 + ((x0 + shift) >> 2);
+
+            for (byte = bytes_to_copy - 1; byte >= 0; byte--) {
+                vga[dst_base + byte] = vga[src_base + byte];
+            }
+        }
     }
 }

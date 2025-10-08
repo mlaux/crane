@@ -97,6 +97,57 @@ void draw_tile_library(struct project *proj, int mute)
 }
 
 
+static void draw_bg_tile(struct project *proj, int x0, int y0, int x, int y, int tile_size)
+{
+    static unsigned char translated[256];
+    int k;
+    int tile_idx = proj->background.tiles[y + bg_scroll_y][x + bg_scroll_x];
+
+    if (tile_idx >= 0) {
+        int pal_idx = proj->background.palettes[y + bg_scroll_y][x + bg_scroll_x];
+        struct tile *tile = &proj->tiles[tile_idx];
+        int base = FIRST_SNES_COLOR + (pal_idx << 4);
+
+        for (k = 0; k < 256; k++) {
+            translated[k] = base + tile->pixels[k];
+        }
+
+        draw_sprite(translated, x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size);
+    } else {
+        // clear out tile
+        fill_rect(x0 + x * tile_size, y0 + y * tile_size, tile_size, tile_size, CONTENT_COLOR);
+        // small dot in the middle
+        fill_rect(
+            x0 + x * tile_size + (tile_size >> 1) - 1,
+            y0 + y * tile_size + (tile_size >> 1) - 1,
+            2, 2,
+            HIGHLIGHT_COLOR
+        );
+    }
+}
+
+void draw_bg_row(struct project *proj, int x0, int y0, int row)
+{
+    int x;
+    int tile_size = proj->tile_size;
+    int tiles_x = 256 / tile_size;
+
+    for (x = 0; x < tiles_x; x++) {
+        draw_bg_tile(proj, x0, y0, x, row, tile_size);
+    }
+}
+
+void draw_bg_column(struct project *proj, int x0, int y0, int col)
+{
+    int y;
+    int tile_size = proj->tile_size;
+    int tiles_y = 224 / tile_size;
+
+    for (y = 0; y < tiles_y; y++) {
+        draw_bg_tile(proj, x0, y0, col, y, tile_size);
+    }
+}
+
 void draw_project_background(struct project *proj, int x0, int y0, int mute)
 {
     static unsigned char translated[256];
@@ -121,14 +172,14 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
                     fill_rect(
                         x0 + x * tile_size,
                         y0 + y * tile_size,
-                        tile_size, tile_size, 
+                        tile_size, tile_size,
                         HIGHLIGHT_COLOR
                     );
                 } else {
                     draw_sprite(
-                        translated, 
-                        x0 + x * tile_size, 
-                        y0 + y * tile_size, 
+                        translated,
+                        x0 + x * tile_size,
+                        y0 + y * tile_size,
                         tile_size, tile_size
                     );
                 }
@@ -136,13 +187,13 @@ void draw_project_background(struct project *proj, int x0, int y0, int mute)
                 fill_rect(
                     x0 + x * tile_size,
                     y0 + y * tile_size,
-                    tile_size, tile_size, 
+                    tile_size, tile_size,
                     CONTENT_COLOR
                 );
                 fill_rect(
                     x0 + x * tile_size + (tile_size >> 1) - 1,
-                    y0 + y * tile_size + (tile_size >> 1) - 1, 
-                    2, 2, 
+                    y0 + y * tile_size + (tile_size >> 1) - 1,
+                    2, 2,
                     HIGHLIGHT_COLOR
                 );
             }

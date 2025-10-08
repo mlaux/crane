@@ -138,41 +138,56 @@ static void button_export_background(struct project *proj)
     draw_status_bar(result ? "Exported background" : "Cancelled");
 }
 
-static void refresh_bg(struct project *proj)
-{
-    hide_cursor();
-    draw_project_background(proj, 56, 8, 0);
-    show_cursor();
-}
-
 static void button_scroll_up(struct project *proj)
 {
+    int tile_size = proj->tile_size;
+
     if (bg_scroll_y > 0) {
         bg_scroll_y--;
-        refresh_bg(proj);
+        hide_cursor();
+        scroll_bg_down(56, 8, 256, 224, tile_size);
+        draw_bg_row(proj, 56, 8, 0);
+        show_cursor();
     }
 }
 
 static void button_scroll_down(struct project *proj)
 {
-    if (bg_scroll_y < 18) {
+    int tile_size = proj->tile_size;
+    int tiles_y = 224 / tile_size;
+
+    if (bg_scroll_y < 32 - tiles_y) {
         bg_scroll_y++;
-        refresh_bg(proj);
+        hide_cursor();
+        scroll_bg_up(56, 8, 256, 224, tile_size);
+        draw_bg_row(proj, 56, 8, tiles_y - 1);
+        show_cursor();
     }
 }
 
 static void button_scroll_left(struct project *proj)
 {
+    int tile_size = proj->tile_size;
+
     if (bg_scroll_x > 0) {
         bg_scroll_x--;
-        refresh_bg(proj);
+        hide_cursor();
+        scroll_bg_right(56, 8, 256, 224, tile_size);
+        draw_bg_column(proj, 56, 8, 0);
+        show_cursor();
     }
 }
 
 static void button_scroll_right(struct project *proj)
 {
-    if (bg_scroll_x < 16) {
+    int tile_size = proj->tile_size;
+    int tiles_x = 256 / tile_size;
+
+    if (bg_scroll_x < 32 - tiles_x) {
         bg_scroll_x++;
-        refresh_bg(proj);
+        hide_cursor();
+        scroll_bg_left(56, 8, 256, 224, tile_size);
+        draw_bg_column(proj, 56, 8, tiles_x - 1);
+        show_cursor();
     }
 }
