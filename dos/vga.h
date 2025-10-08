@@ -63,6 +63,9 @@ void drawf_clear(int x, int y, int bgcolor, const char *fmt, ...);
 
 void draw_sprite(const unsigned char *data, int sx, int sy, int width, int height);
 
+void draw_sprite_aligned(const unsigned char *data, int sx, int sy, int width, int height);
+
+// probably don't need this specialization
 void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy);
 
 void draw_char(unsigned char uch, int x, int y);

@@ -25,6 +25,7 @@ int bg_scroll_x;
 int bg_scroll_y;
 int status_x;
 int status_y;
+int selected_tile = -1;
 
 int rect_contains(int x0, int y0, int w, int h, int x, int y)
 {
@@ -93,11 +94,14 @@ void draw_tile_library(struct project *proj, int mute)
         int tx = 8 + (k & 1) * 20;
         int ty = 8 + (k >> 1) * 20;
         draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, mute);
+        if (k == selected_tile && !mute) {
+            frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, HIGHLIGHT_COLOR);
+        }
     }
 }
 
 
-static void draw_bg_tile(struct project *proj, int x0, int y0, int x, int y, int tile_size)
+void draw_bg_tile(struct project *proj, int x0, int y0, int x, int y, int tile_size)
 {
     static unsigned char translated[256];
     int k;
@@ -233,6 +237,7 @@ int main(int argc, char *argv[])
     int buttons = 0;
     int load_failed = 0;
     static struct project proj;
+    char message[32];
 
     new_project(&proj);
 
@@ -252,7 +257,8 @@ int main(int argc, char *argv[])
     draw_entire_screen(&proj);
 
     if (load_failed) {
-        modal_info("Failed to load project");
+        snprintf(message, 32, "Couldn't load %s", argv[1]);
+        modal_info(message);
     }
 
     while (!kbhit() || getch() != 27) {
@@ -265,6 +271,7 @@ int main(int argc, char *argv[])
 
         if (buttons & 1) {
             handle_tile_clicks(&proj, x, y);
+            handle_background_clicks(&proj, x, y);
             handle_button_clicks(&proj, x, y);
         }
     }

@@ -122,6 +122,34 @@ void draw_sprite(const unsigned char *data, int sx, int sy, int width, int heigh
     }
 }
 
+void draw_sprite_aligned(const unsigned char *data, int sx, int sy, int width, int height)
+{
+    int y, plane;
+    unsigned int offset, start_offset;
+    const unsigned char *in_ptr;
+
+    start_offset = sy * (SCREEN_WIDTH >> 2) + (sx >> 2);
+
+    for (plane = 0; plane < 4; plane++) {
+        outpw(SEQ_ADDR, 1 << (plane + 8) | SEQ_REG_MAP_MASK);
+
+        in_ptr = data + plane;
+        offset = start_offset;
+        for (y = 0; y < height; y++) {
+            unsigned int row_offset = offset;
+            int x;
+            for (x = 0; x < (width >> 2); x++) {
+                if (*in_ptr != 0) {
+                    vga[row_offset] = *in_ptr;
+                }
+                in_ptr += 4;
+                row_offset++;
+            }
+            offset += SCREEN_WIDTH >> 2;
+        }
+    }
+}
+
 void draw_sprite_aligned_16x16(const unsigned char *data, int sx, int sy)
 {
     int y, plane;

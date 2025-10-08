@@ -62,14 +62,64 @@ void handle_button_clicks(struct project *proj, int x, int y)
     }
 }
 
+void handle_background_clicks(struct project *proj, int x, int y)
+{
+    if (selected_tile < 0 || selected_tile >= proj->num_tiles) {
+        return;
+    }
+
+    if (rect_contains(56, 8, 256, 224, x, y)) {
+        int tile_size = proj->tile_size;
+        int bg_x = bg_scroll_x + ((x - 56) / tile_size);
+        int bg_y = bg_scroll_y + ((y - 8) / tile_size);
+
+        if (bg_x >= 0 && bg_x < 32 && bg_y >= 0 && bg_y < 32) {
+            int screen_x = bg_x - bg_scroll_x;
+            int screen_y = bg_y - bg_scroll_y;
+
+            proj->background.tiles[bg_y][bg_x] = selected_tile;
+            proj->background.palettes[bg_y][bg_x] = proj->tiles[selected_tile].preview_palette;
+
+            hide_cursor();
+            draw_bg_tile(proj, 56, 8, screen_x, screen_y, tile_size);
+            show_cursor();
+        }
+    }
+}
+
 void handle_tile_clicks(struct project *proj, int x, int y)
 {
+    static unsigned long last_click_time = 0;
+    static int last_clicked_tile = -1;
+    unsigned long current_time = *TIMER_TICKS;
     int k;
+
     for (k = 0; k < proj->num_tiles && k < 20; k++) {
         int tx = 8 + (k & 1) * 20;
         int ty = 8 + (k >> 1) * 20;
         if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
-            tile_editor(&proj->tiles[k], proj->tile_size);
+            if (k == last_clicked_tile && (current_time - last_click_time) < 9) {
+                // double click
+                tile_editor(&proj->tiles[k], proj->tile_size);
+            } else {
+                // single click, try to deselect old tile
+                int old_selected = selected_tile;
+                hide_cursor();
+                if (old_selected >= 0 && old_selected < 20) {
+                    int old_tx = 8 + (old_selected & 1) * 20;
+                    int old_ty = 8 + (old_selected >> 1) * 20;
+                    frame_rect(old_tx - 1, old_ty - 1, proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
+                }
+                // now highlight new tile
+                selected_tile = k;
+                frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, HIGHLIGHT_COLOR);
+                show_cursor();
+            }
+            last_clicked_tile = k;
+            last_click_time = current_time;
+
+            // wait for mouse up
+            while (poll_mouse(&x, &y) & 1);
             break;
         }
     }

@@ -12,6 +12,7 @@ struct button {
 void invoke_color_picker(struct project *proj);
 void handle_button_clicks(struct project *proj, int x, int y);
 void handle_tile_clicks(struct project *proj, int x, int y);
+void handle_background_clicks(struct project *proj, int x, int y);
 void draw_buttons(void);
 
 #endif

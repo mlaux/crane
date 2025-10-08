@@ -7,6 +7,7 @@
 #include "cursor.h"
 #include "project.h"
 #include "picker.h"
+#include "dialog.h"
 
 #define HS_GRID_X PICKER_X
 #define HS_GRID_Y PICKER_Y
@@ -167,7 +168,7 @@ static void generate_hs_grid(int l)
     }
 }
 
-static void draw_hs_grid_px(int x, int y)
+static void draw_hs_grid(void)
 {
     static const unsigned char bayer[2][2] = {
         { 0, 2 },
@@ -175,44 +176,36 @@ static void draw_hs_grid_px(int x, int y)
     };
     int total_w = HS_GRID_W * HS_CELL_SIZE;
     int total_h = HS_GRID_H * HS_CELL_SIZE;
-
-    int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
-    int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
-
-    int h_cell = grid_x_4 >> 2;
-    int s_cell = grid_y_4 >> 2;
-    int h_frac = grid_x_4 & 3;
-    int s_frac = grid_y_4 & 3;
-
-    int threshold = bayer[y & 1][x & 1];
-
-    int h_use = h_cell;
-    int s_use = s_cell;
-    unsigned char color;
-
-    if (h_frac > threshold && h_cell < HS_GRID_W - 1) {
-        h_use = h_cell + 1;
-    }
-
-    if (s_frac > threshold && s_cell < HS_GRID_H - 1) {
-        s_use = s_cell + 1;
-    }
-
-    color = 0x20 + s_use * HS_GRID_W + h_use;
-    put_pixel(HS_GRID_X + x, HS_GRID_Y + y, color);
-}
-
-static void draw_hs_grid(void)
-{
-    int total_w = HS_GRID_W * HS_CELL_SIZE;
-    int total_h = HS_GRID_H * HS_CELL_SIZE;
-
     int x, y;
+
     for (y = 0; y < total_h; y++) {
         for (x = 0; x < total_w; x++) {
-            draw_hs_grid_px(x, y);
+            int grid_x_4 = (x * (HS_GRID_W * 4 - 1)) / (total_w - 1);
+            int grid_y_4 = (y * (HS_GRID_H * 4 - 1)) / (total_h - 1);
+
+            int h_cell = grid_x_4 >> 2;
+            int s_cell = grid_y_4 >> 2;
+            int h_frac = grid_x_4 & 3;
+            int s_frac = grid_y_4 & 3;
+
+            int threshold = bayer[y & 1][x & 1];
+
+            int h_use = h_cell;
+            int s_use = s_cell;
+
+            if (h_frac > threshold && h_cell < HS_GRID_W - 1) {
+                h_use = h_cell + 1;
+            }
+
+            if (s_frac > threshold && s_cell < HS_GRID_H - 1) {
+                s_use = s_cell + 1;
+            }
+
+            dialog_bg_buffer[y * total_w + x] = 0x20 + s_use * HS_GRID_W + h_use;
         }
     }
+
+    draw_sprite_aligned(dialog_bg_buffer, HS_GRID_X, HS_GRID_Y, total_w, total_h);
 }
 
 static void generate_lightness_slider(int h, int s)
@@ -243,16 +236,16 @@ static void draw_lightness_slider(void)
         for (x = 0; x < L_CELL_SIZE; x++) {
             int threshold = bayer[y & 1][x & 1];
             int l_use = l_cell;
-            unsigned char color;
 
             if (l_frac > threshold && l_cell < L_SLIDER_STEPS - 1) {
                 l_use = l_cell + 1;
             }
 
-            color = 0x10 + l_use;
-            put_pixel(L_SLIDER_X + x, L_SLIDER_Y + y, color);
+            dialog_bg_buffer[y * L_CELL_SIZE + x] = 0x10 + l_use;
         }
     }
+
+    draw_sprite_aligned(dialog_bg_buffer, L_SLIDER_X, L_SLIDER_Y, L_CELL_SIZE, total_h);
 }
 
 static void update_preview_color(void)
@@ -369,26 +362,4 @@ void color_picker(struct rgb *color)
     color->g = temp_out.g;
     color->b = temp_out.b;
     restore_palette();
-}
-
-int standalone_main(void)
-{
-    struct rgb color;
-
-    set_mode_x();
-    init_mouse();
-
-    /* initialize current RGB from initial HSL */
-    color = hsl_to_rgb(cur_h, cur_s, cur_l);
-    cur_r = color.r;
-    cur_g = color.g;
-    cur_b = color.b;
-
-    /* clear screen */
-    fill_rect(0, 0, 320, 240, 0);
-
-    color_picker(&color);
-
-    set_mode(0x03);
-    return 0;
 }
