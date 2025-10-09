@@ -45,33 +45,51 @@ static struct button tool_buttons[] = {
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
     { 290, 0, 8, 8, ICON_SCROLL_LEFT, button_scroll_left },
     { 300, 0, 8, 8, ICON_SCROLL_RIGHT, button_scroll_right },
+};
 
+static struct button status_bar_buttons[] = {
     { 158, 232, 8, 8, ICON_SCROLL_DOWN, button_decrement_palette },
     { 168, 232, 8, 8, ICON_SCROLL_UP, button_increment_palette },
 };
 
-void draw_buttons(void)
+static void draw_button_array(struct button *buttons, int num_buttons)
 {
     int k;
 
-    for (k = 0; k < sizeof(tool_buttons) / sizeof(tool_buttons[0]); k++) {
-        fill_rect(tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h, BUTTON_COLOR);
-        if (tool_buttons[k].icon != -1) {
-            draw_sprite(icons[tool_buttons[k].icon], tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h);
+    for (k = 0; k < num_buttons; k++) {
+        fill_rect(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, BUTTON_COLOR);
+        if (buttons[k].icon != -1) {
+            draw_sprite(icons[buttons[k].icon], buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h);
+        }
+    }
+}
+
+void draw_tool_buttons(void)
+{
+    draw_button_array(tool_buttons, sizeof tool_buttons / sizeof tool_buttons[0]);
+}
+
+void draw_status_bar_buttons(void)
+{
+    draw_button_array(status_bar_buttons, sizeof status_bar_buttons / sizeof status_bar_buttons[0]);
+}
+
+static void check_button_array(struct button *buttons, int num_buttons, struct project *proj, int x, int y)
+{
+    int k;
+    for (k = 0; k < num_buttons; k++) {
+        if (rect_contains(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, x, y)) {
+            buttons[k].on_click(proj);
+            while (poll_mouse(&x, &y) & 1);
+            return;
         }
     }
 }
 
 void handle_button_clicks(struct project *proj, int x, int y)
 {
-    int k;
-    for (k = 0; k < sizeof(tool_buttons) / sizeof(tool_buttons[0]); k++) {
-        if (rect_contains(tool_buttons[k].x, tool_buttons[k].y, tool_buttons[k].w, tool_buttons[k].h, x, y)) {
-            tool_buttons[k].on_click(proj);
-            while (poll_mouse(&x, &y) & 1);
-            return;
-        }
-    }
+    check_button_array(tool_buttons, sizeof tool_buttons / sizeof tool_buttons[0], proj, x, y);
+    check_button_array(tool_buttons, sizeof status_bar_buttons / sizeof status_bar_buttons[0], proj, x, y);
 }
 
 void handle_background_clicks(struct project *proj, int x, int y)

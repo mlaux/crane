@@ -1,5 +1,5 @@
-#ifndef ACTIONS_H
-#define ACTIONS_H
+#ifndef _ACTIONS_H
+#define _ACTIONS_H
 
 #include "project.h"
 
@@ -13,6 +13,7 @@ void handle_button_clicks(struct project *proj, int x, int y);
 void handle_tile_clicks(struct project *proj, int x, int y);
 void handle_background_clicks(struct project *proj, int x, int y);
 void handle_palette_clicks(struct project *proj, int x, int y);
-void draw_buttons(void);
+void draw_tool_buttons(void);
+void draw_status_bar_buttons(void);
 
 #endif

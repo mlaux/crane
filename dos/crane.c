@@ -227,8 +227,8 @@ void draw_status_bar(const char *text)
     fill_rect(0, 232, 320, 8, CONTENT_COLOR);
     drawf(4, 233, "(%2d, %2d) %.20s", status_x, status_y, text);
 
-    // active palette
     draw_snes_palette(180, 233, displayed_palette);
+    draw_status_bar_buttons();
 }
 
 void draw_entire_screen(struct project *proj)
@@ -242,7 +242,7 @@ void draw_entire_screen(struct project *proj)
     draw_project_background(proj, 56, 8, 0);
 
     draw_status_bar(proj->name);
-    draw_buttons();
+    draw_tool_buttons();
 
     show_cursor();
 }
