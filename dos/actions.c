@@ -24,6 +24,8 @@ static void button_scroll_up(struct project *);
 static void button_scroll_down(struct project *);
 static void button_scroll_left(struct project *);
 static void button_scroll_right(struct project *);
+static void button_decrement_palette(struct project *);
+static void button_increment_palette(struct project *);
 
 static struct button tool_buttons[] = {
     { 7, 208, 8, 8, -1, button_color_picker },
@@ -36,6 +38,9 @@ static struct button tool_buttons[] = {
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
     { 290, 0, 8, 8, ICON_SCROLL_LEFT, button_scroll_left },
     { 300, 0, 8, 8, ICON_SCROLL_RIGHT, button_scroll_right },
+
+    { 158, 232, 8, 8, ICON_SCROLL_DOWN, button_decrement_palette },
+    { 168, 232, 8, 8, ICON_SCROLL_UP, button_increment_palette },
 };
 
 void draw_buttons(void)
@@ -266,6 +271,60 @@ static void button_scroll_right(struct project *proj)
             draw_bg_column(proj, 56, 8, tiles_x - 1);
             show_cursor();
             last_tick = current_tick;
+        }
+    }
+}
+
+static void button_decrement_palette(struct project *proj)
+{
+    if (displayed_palette > 0) {
+        displayed_palette--;
+        fill_rect(180, 232, 80, 136, CONTENT_COLOR);
+        draw_snes_palette(180, 233, displayed_palette);
+    }
+}
+
+static void button_increment_palette(struct project *proj)
+{
+    if (displayed_palette < 7) {
+        displayed_palette++;
+        fill_rect(180, 232, 80, 136, CONTENT_COLOR);
+        draw_snes_palette(180, 233, displayed_palette);
+    }
+}
+
+void handle_palette_clicks(struct project *proj, int x, int y)
+{
+    int k;
+    int palette_y = 233;
+    int palette_x_start = 188;
+
+    if (y >= palette_y && y < palette_y + 6) {
+        for (k = 0; k < 16; k++) {
+            int color_x = palette_x_start + k * 8;
+            if (x >= color_x && x < color_x + 6) {
+                int color_index = displayed_palette * 16 + k;
+                struct rgb color = proj->colors[color_index];
+                int result;
+
+                hide_cursor();
+                draw_tile_library(proj, 1);
+                draw_window(52, 4, 264, 232);
+                draw_project_background(proj, 56, 8, 1);
+                fill_rect(0, 232, 320, 8, CONTENT_COLOR);
+
+                draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
+                result = color_picker(&color);
+
+                if (result) {
+                    proj->colors[color_index] = color;
+                    set_palette(FIRST_SNES_COLOR + color_index, color.r, color.g, color.b);
+                }
+
+                draw_entire_screen(proj);
+                while (poll_mouse(&x, &y) & 1);
+                break;
+            }
         }
     }
 }

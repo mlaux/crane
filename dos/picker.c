@@ -306,10 +306,14 @@ static void handle_l_click(int mouse_y)
     generate_hs_grid(cur_l);
 }
 
-void color_picker(struct rgb *color)
+int color_picker(struct rgb *color)
 {
     int mouse_x, mouse_y, buttons;
     struct rgb temp_out;
+    int result = 0;
+    int button_y = PICKER_Y + 152;
+    int cancel_x = PICKER_X + PICKER_WIDTH - 60;
+    int ok_x = cancel_x + 50;
 
     cur_r = color->r;
     cur_g = color->g;
@@ -335,6 +339,8 @@ void color_picker(struct rgb *color)
     generate_hs_grid(cur_l);
     draw_hs_grid();
 
+    draw_string("Cancel    OK", cancel_x, button_y);
+
     show_cursor();
 
     while (1) {
@@ -350,19 +356,35 @@ void color_picker(struct rgb *color)
                 handle_hs_click(mouse_x, mouse_y);
             }
 
-            if (mouse_x >= L_SLIDER_X && mouse_x < L_SLIDER_X + L_CELL_SIZE 
+            if (mouse_x >= L_SLIDER_X && mouse_x < L_SLIDER_X + L_CELL_SIZE
                     && mouse_y >= L_SLIDER_Y && mouse_y <= L_SLIDER_Y + L_SLIDER_STEPS * L_CELL_SIZE) {
                 handle_l_click(mouse_y);
             }
+
+            if (mouse_y >= button_y && mouse_y < button_y + 7) {
+                if (mouse_x >= cancel_x && mouse_x < cancel_x + 30) {
+                    result = 0;
+                    break;
+                }
+                if (mouse_x >= ok_x && mouse_x < ok_x + 10) {
+                    result = 1;
+                    break;
+                }
+            }
         }
 
-        if (kbhit() && getch() == 27)
+        if (kbhit() && getch() == 27) {
+            result = 0;
             break;
+        }
     }
 
-    temp_out = hsl_to_rgb(cur_h, cur_s, cur_l);
-    color->r = temp_out.r;
-    color->g = temp_out.g;
-    color->b = temp_out.b;
+    if (result) {
+        temp_out = hsl_to_rgb(cur_h, cur_s, cur_l);
+        color->r = temp_out.r;
+        color->g = temp_out.g;
+        color->b = temp_out.b;
+    }
     restore_palette();
+    return result;
 }

@@ -23,6 +23,7 @@ char current_filename[13] = "UNTITLED.DAT";
 
 int bg_scroll_x;
 int bg_scroll_y;
+int displayed_palette;
 int status_x;
 int status_y;
 int selected_tile = -1;
@@ -64,7 +65,8 @@ static void upload_project_palette(struct project *proj)
 void draw_snes_palette(int x0, int y0, int index)
 {
     int base = FIRST_SNES_COLOR + (index << 4);
-    int x = x0, k;
+    int x = x0 + 8, k;
+    draw_char(index + '0', 180, 233);
     for (k = 0; k < 16; k++) {
         fill_rect(x, y0, 6, 6, base + k);
         x += 8;
@@ -211,8 +213,7 @@ void draw_status_bar(const char *text)
     drawf(4, 233, "(%2d, %2d) %.20s", status_x, status_y, text);
 
     // active palette
-    draw_char('0', 180, 233);
-    draw_snes_palette(188, 233, 0);
+    draw_snes_palette(180, 233, displayed_palette);
 }
 
 void draw_entire_screen(struct project *proj)
@@ -237,7 +238,7 @@ int main(int argc, char *argv[])
     int buttons = 0;
     int load_failed = 0;
     static struct project proj;
-    char message[32];
+    char message[48];
 
     new_project(&proj);
 
@@ -257,11 +258,11 @@ int main(int argc, char *argv[])
     draw_entire_screen(&proj);
 
     if (load_failed) {
-        snprintf(message, 32, "Couldn't load %s", argv[1]);
+        snprintf(message, 32, "Couldn't load project %s", argv[1]);
         modal_info(message);
     }
 
-    while (!kbhit() || getch() != 27) {
+    while (1) {
         buttons = poll_mouse(&x, &y);
         wait_vblank();
         if (x != cursor_x || y != cursor_y) {
@@ -272,7 +273,13 @@ int main(int argc, char *argv[])
         if (buttons & 1) {
             handle_tile_clicks(&proj, x, y);
             handle_background_clicks(&proj, x, y);
+            handle_palette_clicks(&proj, x, y);
             handle_button_clicks(&proj, x, y);
+        }
+
+        if (kbhit() && getch() == 27 
+                && modal_confirm("Are you sure you want to exit?")) {
+            break;
         }
     }
 

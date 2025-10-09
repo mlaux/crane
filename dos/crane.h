@@ -5,9 +5,13 @@
 
 extern int bg_scroll_x;
 extern int bg_scroll_y;
+extern int displayed_palette;
+
 extern int status_x;
 extern int status_y;
+
 extern int selected_tile;
+
 extern char current_filename[13];
 
 int rect_contains(int x0, int y0, int w, int h, int x, int y);

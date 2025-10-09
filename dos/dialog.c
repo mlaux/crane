@@ -95,6 +95,8 @@ int modal_text_input(const char *prompt, char *value, int value_len)
         frame++;
     }
 
+    while (mouse_buttons_down() & 1);
+
     hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
     show_cursor();
@@ -114,7 +116,7 @@ int modal_confirm(const char *message)
     save_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
     draw_window(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
     draw_string(message, DIALOG_X + 8, DIALOG_Y + 8);
-    draw_string("Cancel    OK", DIALOG_X + DIALOG_WIDTH - 68, DIALOG_Y + 24);
+    draw_string("Cancel    OK", cancel_x, button_y);
     show_cursor();
 
     while (1) {
@@ -151,6 +153,8 @@ int modal_confirm(const char *message)
             move_cursor(mouse_x, mouse_y);
         }
     }
+
+    while (mouse_buttons_down() & 1);
 
     hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
@@ -196,6 +200,8 @@ void modal_info(const char *message)
             move_cursor(mouse_x, mouse_y);
         }
     }
+
+    while (mouse_buttons_down() & 1);
 
     hide_cursor();
     restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
