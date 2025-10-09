@@ -334,12 +334,11 @@ int color_picker(struct rgb *color)
     fill_rect(PREVIEW_X + PREVIEW_W, PREVIEW_Y, PREVIEW_W, PREVIEW_H, COLOR_PICKER_SELECTED_VALUE);
 
     draw_color_info();
+    draw_string("Cancel    OK", cancel_x, button_y);
 
     // this takes longer so do it last
     generate_hs_grid(cur_l);
     draw_hs_grid();
-
-    draw_string("Cancel    OK", cancel_x, button_y);
 
     show_cursor();
 

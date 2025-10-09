@@ -104,8 +104,30 @@ void handle_tile_clicks(struct project *proj, int x, int y)
         int ty = 8 + (k >> 1) * 20;
         if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
             if (k == last_clicked_tile && (current_time - last_click_time) < 9) {
-                // double click
+                // double click, open tile editor
+                int bg_x, bg_y;
+                int tile_size = proj->tile_size;
+                int tiles_x = 256 / tile_size;
+                int tiles_y = 224 / tile_size;
+
                 tile_editor(&proj->tiles[k], proj->tile_size);
+                hide_cursor();
+                draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, 0);
+
+                // now redraw tiles in the background that match the tile that
+                // was just edited
+                for (bg_y = 0; bg_y < tiles_y; bg_y++) {
+                    for (bg_x = 0; bg_x < tiles_x; bg_x++) {
+                        int world_x = bg_scroll_x + bg_x;
+                        int world_y = bg_scroll_y + bg_y;
+                        if (world_x < 32 && world_y < 32) {
+                            if (proj->background.tiles[world_y][world_x] == k) {
+                                draw_bg_tile(proj, 56, 8, bg_x, bg_y, tile_size);
+                            }
+                        }
+                    }
+                }
+                show_cursor();
             } else {
                 // single click, try to deselect old tile
                 int old_selected = selected_tile;
@@ -279,7 +301,6 @@ static void button_decrement_palette(struct project *proj)
 {
     if (displayed_palette > 0) {
         displayed_palette--;
-        fill_rect(180, 232, 80, 136, CONTENT_COLOR);
         draw_snes_palette(180, 233, displayed_palette);
     }
 }
@@ -288,7 +309,6 @@ static void button_increment_palette(struct project *proj)
 {
     if (displayed_palette < 7) {
         displayed_palette++;
-        fill_rect(180, 232, 80, 136, CONTENT_COLOR);
         draw_snes_palette(180, 233, displayed_palette);
     }
 }

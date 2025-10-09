@@ -66,6 +66,8 @@ void draw_snes_palette(int x0, int y0, int index)
 {
     int base = FIRST_SNES_COLOR + (index << 4);
     int x = x0 + 8, k;
+
+    fill_rect(180, 232, 80, 8, CONTENT_COLOR);
     draw_char(index + '0', 180, 233);
     for (k = 0; k < 16; k++) {
         fill_rect(x, y0, 6, 6, base + k);
