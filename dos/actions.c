@@ -15,6 +15,7 @@
 #define TIMER_TICKS ((volatile unsigned long far *)0x0040006cL)
 #define SCROLL_DELAY 2
 
+static void button_new_tile(struct project *);
 static void button_save(struct project *);
 static void button_export_palettes(struct project *);
 static void button_export_tiles(struct project *);
@@ -25,17 +26,20 @@ static void button_scroll_left(struct project *);
 static void button_scroll_right(struct project *);
 static void button_decrement_palette(struct project *);
 static void button_increment_palette(struct project *);
+static void button_tile_library_up(struct project *);
+static void button_tile_library_down(struct project *);
+static void empty_func(struct project *proj) { }
 
 static struct button tool_buttons[] = {
-    { 7, 206, 8, 8, -1, button_save },
-    { 17, 206, 8, 8, -1, button_export_palettes},
-    { 27, 206, 8, 8, -1, button_export_tiles },
-    { 37, 206, 8, 8, -1, button_export_background },
+    { 7, 206, 8, 8, -1, button_new_tile },
+    { 17, 206, 8, 8, -1, empty_func },
+    { 27, 206, 8, 8, ICON_SCROLL_DOWN, button_tile_library_down },
+    { 37, 206, 8, 8, ICON_SCROLL_UP, button_tile_library_up },
 
-    { 7, 216, 8, 8, -1, 0 },
-    { 17, 216, 8, 8, -1, 0 },
-    { 27, 216, 8, 8, -1, 0 },
-    { 37, 216, 8, 8, -1, 0 },
+    { 7, 216, 8, 8, -1, button_save },
+    { 17, 216, 8, 8, -1, button_export_palettes},
+    { 27, 216, 8, 8, -1, button_export_tiles },
+    { 37, 216, 8, 8, -1, button_export_background },
 
     { 312, 12, 8, 8, ICON_SCROLL_UP, button_scroll_up },
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
@@ -102,29 +106,35 @@ void handle_tile_clicks(struct project *proj, int x, int y)
     unsigned long current_time = *TIMER_TICKS;
     int k;
 
-    for (k = 0; k < proj->num_tiles && k < 20; k++) {
-        int tx = 8 + (k & 1) * 20;
-        int ty = 8 + (k >> 1) * 20;
+    for (k = 0; k < 20; k++) {
+        int tile_idx = tile_library_scroll + k;
+        int tx, ty;
+
+        if (tile_idx >= proj->num_tiles) {
+            break;
+        }
+
+        tx = 8 + (k & 1) * 20;
+        ty = 8 + (k >> 1) * 20;
+
         if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
-            if (k == last_clicked_tile && (current_time - last_click_time) < 9) {
+            if (tile_idx == last_clicked_tile && (current_time - last_click_time) < 9) {
                 // double click, open tile editor
                 int bg_x, bg_y;
                 int tile_size = proj->tile_size;
                 int tiles_x = 256 / tile_size;
                 int tiles_y = 224 / tile_size;
 
-                tile_editor(&proj->tiles[k], proj->tile_size);
+                tile_editor(&proj->tiles[tile_idx], proj->tile_size);
                 hide_cursor();
-                draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, 0);
+                draw_project_tile(&proj->tiles[tile_idx], tx, ty, proj->tile_size, 0);
 
-                // now redraw tiles in the background that match the tile that
-                // was just edited
                 for (bg_y = 0; bg_y < tiles_y; bg_y++) {
                     for (bg_x = 0; bg_x < tiles_x; bg_x++) {
                         int world_x = bg_scroll_x + bg_x;
                         int world_y = bg_scroll_y + bg_y;
                         if (world_x < 32 && world_y < 32) {
-                            if (proj->background.tiles[world_y][world_x] == k) {
+                            if (proj->background.tiles[world_y][world_x] == tile_idx) {
                                 draw_bg_tile(proj, 56, 8, bg_x, bg_y, tile_size);
                             }
                         }
@@ -132,20 +142,20 @@ void handle_tile_clicks(struct project *proj, int x, int y)
                 }
                 show_cursor();
             } else {
-                // single click, try to deselect old tile
-                int old_selected = selected_tile;
+                int j;
                 hide_cursor();
-                if (old_selected >= 0 && old_selected < 20) {
-                    int old_tx = 8 + (old_selected & 1) * 20;
-                    int old_ty = 8 + (old_selected >> 1) * 20;
-                    frame_rect(old_tx - 1, old_ty - 1, proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
+                for (j = 0; j < 20; j++) {
+                    int unhighlight_tx = 8 + (j & 1) * 20;
+                    int unhighlight_ty = 8 + (j >> 1) * 20;
+                    frame_rect(unhighlight_tx - 1, unhighlight_ty - 1, 
+                        proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
                 }
-                // now highlight new tile
-                selected_tile = k;
-                frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, HIGHLIGHT_COLOR);
+                selected_tile = tile_idx;
+                frame_rect(tx - 1, ty - 1, proj->tile_size + 2, 
+                        proj->tile_size + 2, HIGHLIGHT_COLOR);
                 show_cursor();
             }
-            last_clicked_tile = k;
+            last_clicked_tile = tile_idx;
             last_click_time = current_time;
 
             // wait for mouse up
@@ -153,6 +163,31 @@ void handle_tile_clicks(struct project *proj, int x, int y)
             break;
         }
     }
+}
+
+static void button_new_tile(struct project *proj)
+{
+    int k;
+    int tile_idx;
+
+    if (proj->num_tiles >= MAX_TILES) {
+        modal_info("Can't create any more tiles (max 100)");
+        return;
+    }
+
+    tile_idx = proj->num_tiles;
+    proj->num_tiles++;
+
+    for (k = 0; k < 256; k++) {
+        proj->tiles[tile_idx].pixels[k] = 0;
+    }
+    proj->tiles[tile_idx].preview_palette = displayed_palette;
+
+    tile_editor(&proj->tiles[tile_idx], proj->tile_size);
+
+    hide_cursor();
+    redraw_tile_library_tiles(proj, 0);
+    show_cursor();
 }
 
 static void button_save(struct project *proj)
@@ -331,5 +366,28 @@ void handle_palette_clicks(struct project *proj, int x, int y)
                 break;
             }
         }
+    }
+}
+
+static void button_tile_library_up(struct project *proj)
+{
+    if (tile_library_scroll > 0) {
+        tile_library_scroll -= 2;
+        if (tile_library_scroll < 0) {
+            tile_library_scroll = 0;
+        }
+        hide_cursor();
+        redraw_tile_library_tiles(proj, 0);
+        show_cursor();
+    }
+}
+
+static void button_tile_library_down(struct project *proj)
+{
+    if (tile_library_scroll + 20 < proj->num_tiles) {
+        tile_library_scroll += 2;
+        hide_cursor();
+        redraw_tile_library_tiles(proj, 0);
+        show_cursor();
     }
 }

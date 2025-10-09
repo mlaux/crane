@@ -24,6 +24,7 @@ char current_filename[13] = "UNTITLED.DAT";
 int bg_scroll_x;
 int bg_scroll_y;
 int displayed_palette;
+int tile_library_scroll;
 int status_x;
 int status_y;
 int selected_tile = -1;
@@ -90,20 +91,32 @@ void draw_project_tile(struct tile *tile, int x, int y, int tile_size, int mute)
     }
 }
 
-void draw_tile_library(struct project *proj, int mute)
+void redraw_tile_library_tiles(struct project *proj, int mute)
 {
     int k;
-    draw_window(4, 4, 44, 224);
-    for (k = 0; k < proj->num_tiles && k < 20; k++) {
+
+    for (k = 0; k < 20; k++) {
+        int tile_idx = tile_library_scroll + k;
         int tx = 8 + (k & 1) * 20;
         int ty = 8 + (k >> 1) * 20;
-        draw_project_tile(&proj->tiles[k], tx, ty, proj->tile_size, mute);
-        if (k == selected_tile && !mute) {
-            frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, HIGHLIGHT_COLOR);
+        frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
+
+        if (tile_idx < proj->num_tiles) {
+            draw_project_tile(&proj->tiles[tile_idx], tx, ty, proj->tile_size, mute);
+            if (tile_idx == selected_tile && !mute) {
+                frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, HIGHLIGHT_COLOR);
+            }
+        } else {
+            fill_rect(tx, ty, proj->tile_size, proj->tile_size, CONTENT_COLOR);
         }
     }
 }
 
+void draw_tile_library(struct project *proj, int mute)
+{
+    draw_window(4, 4, 44, 224);
+    redraw_tile_library_tiles(proj, mute);
+}
 
 void draw_bg_tile(struct project *proj, int x0, int y0, int x, int y, int tile_size)
 {

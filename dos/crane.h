@@ -6,6 +6,7 @@
 extern int bg_scroll_x;
 extern int bg_scroll_y;
 extern int displayed_palette;
+extern int tile_library_scroll;
 
 extern int status_x;
 extern int status_y;
@@ -17,6 +18,7 @@ extern char current_filename[13];
 int rect_contains(int x0, int y0, int w, int h, int x, int y);
 void draw_snes_palette(int x0, int y0, int index);
 void draw_project_tile(struct tile *tile, int x, int y, int tile_size, int mute);
+void redraw_tile_library_tiles(struct project *proj, int mute);
 void draw_tile_library(struct project *proj, int mute);
 void draw_project_background(struct project *proj, int x0, int y0, int mute);
 void draw_bg_tile(struct project *proj, int x0, int y0, int x, int y, int tile_size);
