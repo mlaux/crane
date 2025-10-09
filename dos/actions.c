@@ -15,7 +15,6 @@
 #define TIMER_TICKS ((volatile unsigned long far *)0x0040006cL)
 #define SCROLL_DELAY 2
 
-static void button_color_picker(struct project *);
 static void button_save(struct project *);
 static void button_export_palettes(struct project *);
 static void button_export_tiles(struct project *);
@@ -28,11 +27,15 @@ static void button_decrement_palette(struct project *);
 static void button_increment_palette(struct project *);
 
 static struct button tool_buttons[] = {
-    { 7, 208, 8, 8, -1, button_color_picker },
-    { 17, 208, 8, 8, -1, button_save },
-    { 27, 208, 8, 8, -1, button_export_palettes },
-    { 37, 208, 8, 8, -1, button_export_tiles },
-    { 7, 218, 8, 8, -1, button_export_background },
+    { 7, 206, 8, 8, -1, button_save },
+    { 17, 206, 8, 8, -1, button_export_palettes},
+    { 27, 206, 8, 8, -1, button_export_tiles },
+    { 37, 206, 8, 8, -1, button_export_background },
+
+    { 7, 216, 8, 8, -1, 0 },
+    { 17, 216, 8, 8, -1, 0 },
+    { 27, 216, 8, 8, -1, 0 },
+    { 37, 216, 8, 8, -1, 0 },
 
     { 312, 12, 8, 8, ICON_SCROLL_UP, button_scroll_up },
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
@@ -150,24 +153,6 @@ void handle_tile_clicks(struct project *proj, int x, int y)
             break;
         }
     }
-}
-
-static void button_color_picker(struct project *proj)
-{
-    struct rgb color = { 51, 1, 34 };
-    int x, y;
-    hide_cursor();
-
-    draw_tile_library(proj, 1);
-    draw_window(52, 4, 264, 232);
-    draw_project_background(proj, 56, 8, 1);
-    fill_rect(0, 232, 320, 8, CONTENT_COLOR);
-
-    draw_window(PICKER_X - 4, PICKER_Y - 4, PICKER_WIDTH + 8, PICKER_HEIGHT + 8);
-    color_picker(&color);
-
-    draw_entire_screen(proj);
-    while (poll_mouse(&x, &y) & 1);
 }
 
 static void button_save(struct project *proj)

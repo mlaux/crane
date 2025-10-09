@@ -128,6 +128,7 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
                 }
             }
 
+            // palette up/down buttons. TODO break this out separately
             if (!handled && rect_contains(158, 232, 8, 8, x, y)) {
                 if (displayed_palette > 0) {
                     displayed_palette--;
@@ -168,9 +169,6 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
 
     hide_cursor();
     close_tile_editor(tile_size, dialog_bg_buffer);
-    fill_rect(180, 232, 80, 8, CONTENT_COLOR);
     draw_snes_palette(180, 233, displayed_palette);
     show_cursor();
-
-    while (poll_mouse(&x, &y) & 1);
 }
