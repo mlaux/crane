@@ -88,7 +88,7 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
 
     hide_cursor();
     draw_tile_editor(tile, tile_size, dialog_bg_buffer);
-    draw_snes_palette(180, 233, displayed_palette);
+    draw_snes_palette(180, 232, displayed_palette);
     draw_color_selection(current_color);
     show_cursor();
 
@@ -134,7 +134,7 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
                     displayed_palette--;
                     tile->preview_palette = displayed_palette;
                     hide_cursor();
-                    draw_snes_palette(180, 233, displayed_palette);
+                    draw_snes_palette(180, 232, displayed_palette);
                     draw_color_selection(current_color);
                     draw_tile_pixels(tile, tile_size);
                     show_cursor();
@@ -147,7 +147,7 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
                     displayed_palette++;
                     tile->preview_palette = displayed_palette;
                     hide_cursor();
-                    draw_snes_palette(180, 233, displayed_palette);
+                    draw_snes_palette(180, 232, displayed_palette);
                     draw_color_selection(current_color);
                     draw_tile_pixels(tile, tile_size);
                     show_cursor();
@@ -155,13 +155,15 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
                 }
             }
 
-            if (!handled && editor_contains(x, y, tile_size)) {
+            if (handled) {
+                // only wait for mouse up if it was a button action
+                while (poll_mouse(&x, &y) & 1);
+            } else if (editor_contains(x, y, tile_size)) {
+                // allow dragging for pixel drawing
                 hide_cursor();
                 handle_pixel_click(tile, tile_size, x, y, current_color);
                 show_cursor();
             }
-
-            while (poll_mouse(&x, &y) & 1);
         }
     }
 
@@ -169,6 +171,6 @@ void tile_editor(struct tile *tile, unsigned char tile_size)
 
     hide_cursor();
     close_tile_editor(tile_size, dialog_bg_buffer);
-    draw_snes_palette(180, 233, displayed_palette);
+    draw_snes_palette(180, 232, displayed_palette);
     show_cursor();
 }

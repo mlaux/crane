@@ -12,8 +12,9 @@ const unsigned char ui_colors[] = {
     0x30, 0x16, 0x06, // CURSOR_FISH_SHADOW
     0x3f, 0x3f, 0x00, // COLOR_PICKER_SELECTED_VALUE
     0x10, 0x18, 0x20, // BUTTON_COLOR
-    0x18, 0x20, 0x28, // BUTTON_HIGHLIGHT
     0x3f, 0x3f, 0x00, // COLOR_PICKER_INITIAL_VALUE
+    54, 30, 52, // PINK_LIGHT
+    50, 22, 48, // PINK_DARK
 };
 
 void get_palette(

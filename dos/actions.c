@@ -31,12 +31,12 @@ static void button_tile_library_down(struct project *);
 static void empty_func(struct project *proj) { }
 
 static struct button tool_buttons[] = {
-    { 7, 206, 8, 8, -1, button_new_tile },
-    { 17, 206, 8, 8, -1, empty_func },
+    { 7, 206, 8, 8, ICON_PLUS, button_new_tile },
+    { 17, 206, 8, 8, ICON_MINUS, empty_func },
     { 27, 206, 8, 8, ICON_SCROLL_DOWN, button_tile_library_down },
     { 37, 206, 8, 8, ICON_SCROLL_UP, button_tile_library_up },
 
-    { 7, 216, 8, 8, -1, button_save },
+    { 7, 216, 8, 8, ICON_SAVE, button_save },
     { 17, 216, 8, 8, -1, button_export_palettes},
     { 27, 216, 8, 8, -1, button_export_tiles },
     { 37, 216, 8, 8, -1, button_export_background },
@@ -89,7 +89,7 @@ static void check_button_array(struct button *buttons, int num_buttons, struct p
 void handle_button_clicks(struct project *proj, int x, int y)
 {
     check_button_array(tool_buttons, sizeof tool_buttons / sizeof tool_buttons[0], proj, x, y);
-    check_button_array(tool_buttons, sizeof status_bar_buttons / sizeof status_bar_buttons[0], proj, x, y);
+    check_button_array(status_bar_buttons, sizeof status_bar_buttons / sizeof status_bar_buttons[0], proj, x, y);
 }
 
 void handle_background_clicks(struct project *proj, int x, int y)
@@ -339,7 +339,7 @@ static void button_decrement_palette(struct project *proj)
 {
     if (displayed_palette > 0) {
         displayed_palette--;
-        draw_snes_palette(180, 233, displayed_palette);
+        draw_snes_palette(180, 232, displayed_palette);
     }
 }
 
@@ -347,14 +347,14 @@ static void button_increment_palette(struct project *proj)
 {
     if (displayed_palette < 7) {
         displayed_palette++;
-        draw_snes_palette(180, 233, displayed_palette);
+        draw_snes_palette(180, 232, displayed_palette);
     }
 }
 
 void handle_palette_clicks(struct project *proj, int x, int y)
 {
     int k;
-    int palette_y = 233;
+    int palette_y = 232;
     int palette_x_start = 188;
 
     if (y >= palette_y && y < palette_y + 6) {

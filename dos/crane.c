@@ -68,10 +68,10 @@ void draw_snes_palette(int x0, int y0, int index)
     int base = FIRST_SNES_COLOR + (index << 4);
     int x = x0 + 8, k;
 
-    fill_rect(180, 232, 80, 8, CONTENT_COLOR);
-    draw_char(index + '0', 180, 233);
+    fill_rect(x0, y0, 136, 8, CONTENT_COLOR);
+    draw_char(index + '0', x0, y0 + 1);
     for (k = 0; k < 16; k++) {
-        fill_rect(x, y0, 6, 6, base + k);
+        fill_rect(x, y0 + 1, 6, 6, base + k);
         x += 8;
     }
 }
@@ -227,7 +227,7 @@ void draw_status_bar(const char *text)
     fill_rect(0, 232, 320, 8, CONTENT_COLOR);
     drawf(4, 233, "(%2d, %2d) %.20s", status_x, status_y, text);
 
-    draw_snes_palette(180, 233, displayed_palette);
+    draw_snes_palette(180, 232, displayed_palette);
     draw_status_bar_buttons();
 }
 
