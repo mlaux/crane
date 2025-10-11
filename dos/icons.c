@@ -73,4 +73,24 @@ const unsigned char icons[NUM_ICONS][ICON_SIZE * ICON_SIZE] = {
         0, PINK_LIGHT, PINK_DARK, PINK_DARK, PINK_DARK, PINK_DARK, PINK_LIGHT, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
     },
+    {
+        0, 0, 0, W, 0, 0, 0, 0,
+        0, 0, W, W, W, 0, 0, 0,
+        0, W, W, W, W, W, 0, 0,
+        0, 0, 0, W, 0, 0, 0, 0, 
+        0, 0, 0, W, 0, 0, 0, 0, 
+        W, 0, 0, 0, 0, 0, W, 0,
+        W, 0, 0, 0, 0, 0, W, 0,
+        W, W, W, W, W, W, W, 0,
+    },
+    {
+        0, 0, W, 0, 0, W, 0, 0, 
+        0, 0, W, W, W, GRAY_BLUE_TINT, 0, 0, 
+        W, GRAY_BLUE_TINT, W, GRAY_BLUE_TINT, GRAY_BLUE_TINT, W, W, W, 
+        0, W, GRAY_BLUE_TINT, 0, 0, GRAY_BLUE_TINT, W, 0, 
+        0, W, GRAY_BLUE_TINT, 0, 0, GRAY_BLUE_TINT, W, 0, 
+        W, W, W, GRAY_BLUE_TINT, GRAY_BLUE_TINT, W, GRAY_BLUE_TINT, W, 
+        0, 0, GRAY_BLUE_TINT, W, W, W, 0, 0, 
+        0, 0, W, 0, 0, W, 0, 0, 
+    }
 };

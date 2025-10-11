@@ -37,9 +37,9 @@ static struct button tool_buttons[] = {
     { 37, 206, 8, 8, ICON_SCROLL_UP, button_tile_library_up },
 
     { 7, 216, 8, 8, ICON_SAVE, button_save },
-    { 17, 216, 8, 8, -1, button_export_palettes},
+    { 17, 216, 8, 8, ICON_EXPORT, button_export_palettes},
     { 27, 216, 8, 8, -1, button_export_tiles },
-    { 37, 216, 8, 8, -1, button_export_background },
+    { 37, 216, 8, 8, ICON_SETTINGS, button_export_background },
 
     { 312, 12, 8, 8, ICON_SCROLL_UP, button_scroll_up },
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
@@ -57,7 +57,7 @@ static void draw_button_array(struct button *buttons, int num_buttons)
     int k;
 
     for (k = 0; k < num_buttons; k++) {
-        fill_rect(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, BUTTON_COLOR);
+        fill_rect(buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h, BACKGROUND_COLOR);
         if (buttons[k].icon != -1) {
             draw_sprite(icons[buttons[k].icon], buttons[k].x, buttons[k].y, buttons[k].w, buttons[k].h);
         }
@@ -122,22 +122,26 @@ void handle_tile_clicks(struct project *proj, int x, int y)
     static unsigned long last_click_time = 0;
     static int last_clicked_tile = -1;
     unsigned long current_time = *TIMER_TICKS;
+    int tiles_per_row = (proj->tile_size == 8) ? 4 : 2;
+    int spacing = (proj->tile_size == 8) ? 10 : 20;
+    int num_visible = (proj->tile_size == 8) ? 80 : 20;
     int k;
 
-    for (k = 0; k < 20; k++) {
+    for (k = 0; k < num_visible; k++) {
         int tile_idx = tile_library_scroll + k;
-        int tx, ty;
+        int col, row, tx, ty;
 
         if (tile_idx >= proj->num_tiles) {
             break;
         }
 
-        tx = 8 + (k & 1) * 20;
-        ty = 8 + (k >> 1) * 20;
+        col = k % tiles_per_row;
+        row = k / tiles_per_row;
+        tx = 8 + col * spacing;
+        ty = 8 + row * spacing;
 
-        if (x >= tx && x < tx + 16 && y >= ty && y < ty + 16) {
+        if (x >= tx && x < tx + proj->tile_size && y >= ty && y < ty + proj->tile_size) {
             if (tile_idx == last_clicked_tile && (current_time - last_click_time) < 9) {
-                // double click, open tile editor
                 int bg_x, bg_y;
                 int tile_size = proj->tile_size;
                 int tiles_x = 256 / tile_size;
@@ -162,21 +166,22 @@ void handle_tile_clicks(struct project *proj, int x, int y)
             } else {
                 int j;
                 hide_cursor();
-                for (j = 0; j < 20; j++) {
-                    int unhighlight_tx = 8 + (j & 1) * 20;
-                    int unhighlight_ty = 8 + (j >> 1) * 20;
-                    frame_rect(unhighlight_tx - 1, unhighlight_ty - 1, 
+                for (j = 0; j < num_visible; j++) {
+                    int unhighlight_col = j % tiles_per_row;
+                    int unhighlight_row = j / tiles_per_row;
+                    int unhighlight_tx = 8 + unhighlight_col * spacing;
+                    int unhighlight_ty = 8 + unhighlight_row * spacing;
+                    frame_rect(unhighlight_tx - 1, unhighlight_ty - 1,
                         proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
                 }
                 selected_tile = tile_idx;
-                frame_rect(tx - 1, ty - 1, proj->tile_size + 2, 
+                frame_rect(tx - 1, ty - 1, proj->tile_size + 2,
                         proj->tile_size + 2, HIGHLIGHT_COLOR);
                 show_cursor();
             }
             last_clicked_tile = tile_idx;
             last_click_time = current_time;
 
-            // wait for mouse up
             while (poll_mouse(&x, &y) & 1);
             break;
         }
@@ -227,6 +232,8 @@ static void button_export_palettes(struct project *proj)
     char filename[13];
     int result;
     strcpy(filename, "EXPORT.PAL");
+
+    modal_three_option("What would you like to export?", "Palettes", "Tiles", "Background");
 
     result = modal_text_input("Export palette as", filename, 13);
     if (result) {
@@ -389,8 +396,9 @@ void handle_palette_clicks(struct project *proj, int x, int y)
 
 static void button_tile_library_up(struct project *proj)
 {
+    int tiles_per_row = (proj->tile_size == 8) ? 4 : 2;
     if (tile_library_scroll > 0) {
-        tile_library_scroll -= 2;
+        tile_library_scroll -= tiles_per_row;
         if (tile_library_scroll < 0) {
             tile_library_scroll = 0;
         }
@@ -402,8 +410,10 @@ static void button_tile_library_up(struct project *proj)
 
 static void button_tile_library_down(struct project *proj)
 {
-    if (tile_library_scroll + 20 < proj->num_tiles) {
-        tile_library_scroll += 2;
+    int tiles_per_row = (proj->tile_size == 8) ? 4 : 2;
+    int num_visible = (proj->tile_size == 8) ? 80 : 20;
+    if (tile_library_scroll + num_visible < proj->num_tiles) {
+        tile_library_scroll += tiles_per_row;
         hide_cursor();
         redraw_tile_library_tiles(proj, 0);
         show_cursor();

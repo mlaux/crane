@@ -15,6 +15,7 @@ const unsigned char ui_colors[] = {
     0x3f, 0x3f, 0x00, // COLOR_PICKER_INITIAL_VALUE
     54, 30, 52, // PINK_LIGHT
     50, 22, 48, // PINK_DARK
+    28, 30, 40, // GRAY_BLUE_TINT
 };
 
 void get_palette(

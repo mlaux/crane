@@ -94,11 +94,16 @@ void draw_project_tile(struct tile *tile, int x, int y, int tile_size, int mute)
 void redraw_tile_library_tiles(struct project *proj, int mute)
 {
     int k;
+    int tiles_per_row = (proj->tile_size == 8) ? 4 : 2;
+    int spacing = (proj->tile_size == 8) ? 10 : 20;
+    int num_visible = (proj->tile_size == 8) ? 80 : 20;
 
-    for (k = 0; k < 20; k++) {
+    for (k = 0; k < num_visible; k++) {
         int tile_idx = tile_library_scroll + k;
-        int tx = 8 + (k & 1) * 20;
-        int ty = 8 + (k >> 1) * 20;
+        int col = k % tiles_per_row;
+        int row = k / tiles_per_row;
+        int tx = 8 + col * spacing;
+        int ty = 8 + row * spacing;
         frame_rect(tx - 1, ty - 1, proj->tile_size + 2, proj->tile_size + 2, CONTENT_COLOR);
 
         if (tile_idx < proj->num_tiles) {

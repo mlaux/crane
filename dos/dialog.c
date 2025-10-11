@@ -163,6 +163,77 @@ int modal_confirm(const char *message)
     return result;
 }
 
+int modal_three_option(
+    const char *message,
+    const char *option1,
+    const char *option2,
+    const char *option3
+) {
+    int mouse_x, mouse_y, buttons;
+    int result = 0;
+    const int button_y = DIALOG_Y + 24;
+    int w1 = 5 * strlen(option1);
+    int w2 = 5 * strlen(option2);
+    int w3 = 5 * strlen(option3);
+    int total_width = w1 + w2 + w3 + 40;
+    int start_x = DIALOG_X + (DIALOG_WIDTH - total_width) / 2;
+    int opt1_x = start_x;
+    int opt2_x = start_x + w1 + 20;
+    int opt3_x = start_x + w1 + 20 + w2 + 20;
+
+    hide_cursor();
+    save_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
+    draw_window(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
+    draw_string(message, DIALOG_X + 8, DIALOG_Y + 8);
+    draw_string(option1, opt1_x, button_y);
+    draw_string(option2, opt2_x, button_y);
+    draw_string(option3, opt3_x, button_y);
+    show_cursor();
+
+    while (1) {
+        if (kbhit()) {
+            int ch = getch();
+            if (ch == 27) {
+                result = 0;
+                break;
+            }
+        }
+
+        buttons = poll_mouse(&mouse_x, &mouse_y);
+
+        if (buttons & 1) {
+            if (mouse_y >= button_y && mouse_y < button_y + 7) {
+                if (mouse_x >= opt1_x && mouse_x < opt1_x + w1) {
+                    result = 0;
+                    break;
+                }
+                if (mouse_x >= opt2_x && mouse_x < opt2_x + w2) {
+                    result = 1;
+                    break;
+                }
+                if (mouse_x >= opt3_x && mouse_x < opt3_x + w3) {
+                    result = 2;
+                    break;
+                }
+            }
+        }
+
+        wait_vblank();
+
+        if (mouse_x != cursor_x || mouse_y != cursor_y) {
+            move_cursor(mouse_x, mouse_y);
+        }
+    }
+
+    while (mouse_buttons_down() & 1);
+
+    hide_cursor();
+    restore_background(DIALOG_X - 1, DIALOG_Y - 1, DIALOG_WIDTH + 1, DIALOG_HEIGHT + 1, dialog_bg_buffer);
+    show_cursor();
+
+    return result;
+}
+
 void modal_info(const char *message)
 {
     int mouse_x, mouse_y, buttons;
