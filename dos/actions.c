@@ -17,9 +17,7 @@
 
 static void button_new_tile(struct project *);
 static void button_save(struct project *);
-static void button_export_palettes(struct project *);
-static void button_export_tiles(struct project *);
-static void button_export_background(struct project *);
+static void button_export(struct project *);
 static void button_scroll_up(struct project *);
 static void button_scroll_down(struct project *);
 static void button_scroll_left(struct project *);
@@ -37,9 +35,9 @@ static struct button tool_buttons[] = {
     { 37, 206, 8, 8, ICON_SCROLL_UP, button_tile_library_up },
 
     { 7, 216, 8, 8, ICON_SAVE, button_save },
-    { 17, 216, 8, 8, ICON_EXPORT, button_export_palettes},
-    { 27, 216, 8, 8, -1, button_export_tiles },
-    { 37, 216, 8, 8, ICON_SETTINGS, button_export_background },
+    { 17, 216, 8, 8, ICON_EXPORT, button_export },
+    { 27, 216, 8, 8, -1, empty_func },
+    { 37, 216, 8, 8, ICON_SETTINGS, empty_func },
 
     { 312, 12, 8, 8, ICON_SCROLL_UP, button_scroll_up },
     { 312, 22, 8, 8, ICON_SCROLL_DOWN, button_scroll_down },
@@ -227,45 +225,38 @@ static void button_save(struct project *proj)
     draw_status_bar(result ? "Saved" : "Cancelled");
 }
 
-static void button_export_palettes(struct project *proj)
+static void button_export(struct project *proj)
 {
     char filename[13];
-    int result;
-    strcpy(filename, "EXPORT.PAL");
+    int choice, result;
+    const char *prompt;
+    const char *status_message;
 
-    modal_three_option("What would you like to export?", "Palettes", "Tiles", "Background");
-
-    result = modal_text_input("Export palette as", filename, 13);
-    if (result) {
-        export_palettes(proj, filename);
+    choice = modal_three_option("What would you like to export?", "Palettes", "Tiles", "Background");
+    if (choice == 0) {
+        strcpy(filename, "EXPORT.PAL");
+        prompt = "Export palettes as";
+        status_message = "Exported palettes";
+    } else if (choice == 1) {
+        strcpy(filename, "EXPORT.4BP");
+        prompt = "Export tiles as";
+        status_message = "Exported tiles";
+    } else if (choice == 2) {
+        strcpy(filename, "EXPORT.MAP");
+        prompt = "Export background as";
+        status_message = "Exported background";
     }
-    draw_status_bar(result ? "Exported palettes" : "Cancelled");
-}
 
-static void button_export_tiles(struct project *proj)
-{
-    char filename[13];
-    int result;
-    strcpy(filename, "EXPORT.4BP");
-
-    result = modal_text_input("Export tiles as", filename, 13);
+    result = modal_text_input(prompt, filename, 13);
     if (result) {
-        export_tiles(proj, filename);
+        switch (choice) {
+            case 0: export_palettes(proj, filename); break;
+            case 1: export_tiles(proj, filename); break;
+            // TODO palette offset feature
+            case 2: export_background(proj, filename, 0); break;
+        }
     }
-    draw_status_bar(result ? "Exported tiles" : "Cancelled");
-}
-
-static void button_export_background(struct project *proj)
-{
-    char filename[13];
-    int result;
-    strcpy(filename, "EXPORT.MAP");
-
-    result = modal_text_input("Export background as", filename, 13);
-    if (result) {
-        export_background(proj, filename, 0);
-    }
-    draw_status_bar(result ? "Exported background" : "Cancelled");
+    draw_status_bar(result ? status_message : "Cancelled");
 }
 
 static void button_scroll_up(struct project *proj)
