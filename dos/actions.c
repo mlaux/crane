@@ -16,6 +16,7 @@
 #define SCROLL_DELAY 2
 
 static void button_new_tile(struct project *);
+static void button_delete_tile(struct project *);
 static void button_save(struct project *);
 static void button_export(struct project *);
 static void button_scroll_up(struct project *);
@@ -30,7 +31,7 @@ static void empty_func(struct project *proj) { }
 
 static struct button tool_buttons[] = {
     { 7, 206, 8, 8, ICON_PLUS, button_new_tile },
-    { 17, 206, 8, 8, ICON_MINUS, empty_func },
+    { 17, 206, 8, 8, ICON_MINUS, button_delete_tile },
     { 27, 206, 8, 8, ICON_SCROLL_DOWN, button_tile_library_down },
     { 37, 206, 8, 8, ICON_SCROLL_UP, button_tile_library_up },
 
@@ -207,6 +208,48 @@ static void button_new_tile(struct project *proj)
     tile_editor(&proj->tiles[tile_idx], proj->tile_size);
 
     hide_cursor();
+    redraw_tile_library_tiles(proj, 0);
+    show_cursor();
+}
+
+static void button_delete_tile(struct project *proj)
+{
+    int x, y, k;
+    int tile_size = proj->tile_size;
+    int tiles_x = 256 / tile_size;
+    int tiles_y = 224 / tile_size;
+
+    if (proj->num_tiles == 0 || selected_tile < 0 || selected_tile >= proj->num_tiles) {
+        return;
+    }
+
+    hide_cursor();
+
+    for (y = 0; y < 32; y++) {
+        for (x = 0; x < 32; x++) {
+            if (proj->background.tiles[y][x] == selected_tile) {
+                proj->background.tiles[y][x] = -1;
+
+                if (x >= bg_scroll_x && x < bg_scroll_x + tiles_x &&
+                    y >= bg_scroll_y && y < bg_scroll_y + tiles_y) {
+                    draw_bg_tile(proj, 56, 8, x - bg_scroll_x, y - bg_scroll_y, tile_size);
+                }
+            } else if (proj->background.tiles[y][x] > selected_tile) {
+                proj->background.tiles[y][x]--;
+            }
+        }
+    }
+
+    for (k = selected_tile; k < proj->num_tiles - 1; k++) {
+        proj->tiles[k] = proj->tiles[k + 1];
+    }
+
+    proj->num_tiles--;
+
+    if (selected_tile >= proj->num_tiles) {
+        selected_tile = proj->num_tiles - 1;
+    }
+
     redraw_tile_library_tiles(proj, 0);
     show_cursor();
 }
