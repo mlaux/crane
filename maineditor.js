@@ -88,9 +88,18 @@ function createTile() {
         evt.preventDefault();
         evt.dataTransfer.dropEffect = 'move';
     };
+    canvas.ondragenter = function(evt) {
+        evt.preventDefault();
+        highlightTile(tile);
+    };
+    canvas.ondragleave = function(evt) {
+        evt.preventDefault();
+        highlightTile(null);
+    };
     // ondrop fires on the destination tile, not the source tile
     canvas.ondrop = function(evt) {
         evt.preventDefault();
+        highlightTile(null);
         const oldIndex = parseInt(evt.dataTransfer.getData('text/plain'));
         const newIndex = tiles.indexOf(tile); // this is a different tile
         if (oldIndex !== newIndex) {
@@ -104,59 +113,33 @@ function createTile() {
 }
 
 function moveTile(oldIndex, newIndex) {
-    const tile = tiles[oldIndex];
+    const oldCanvas = tiles[oldIndex].canvas;
+    const newCanvas = tiles[newIndex].canvas;
 
-    tiles.splice(oldIndex, 1);
-    tiles.splice(newIndex, 0, tile);
+    const tempTile = tiles[oldIndex];
+    tiles[oldIndex] = tiles[newIndex];
+    tiles[newIndex] = tempTile;
 
-    const tileEntries = document.getElementById('tile-entries');
-    tileEntries.removeChild(tile.canvas);
-    const referenceNode = tileEntries.children[newIndex];
-    if (referenceNode) {
-        tileEntries.insertBefore(tile.canvas, referenceNode);
-    } else {
-        tileEntries.appendChild(tile.canvas);
-    }
+    const tempMarker = document.createElement('div');
+    oldCanvas.parentNode.insertBefore(tempMarker, oldCanvas);
+    newCanvas.parentNode.insertBefore(oldCanvas, newCanvas);
+    tempMarker.parentNode.insertBefore(newCanvas, tempMarker);
+    tempMarker.parentNode.removeChild(tempMarker);
 
-    // update background tile indices to match the reordered tiles array
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
         for (let x = 0; x < BG_WIDTH_TILES; x++) {
-            const currentTileIndex = background[y][x];
-            if (currentTileIndex === -1) {
-                continue;
-            }
-
-            // case 1: the tile that was moved gets the new index
-            if (currentTileIndex === oldIndex) {
+            if (background[y][x] === oldIndex) {
                 background[y][x] = newIndex;
-            // case 2: moving forward (e.g., index 2 -> 5)
-            } else if (oldIndex < newIndex) {
-                // tiles between old and new positions shift left by 1
-                // (e.g., tiles 3,4,5 become 2,3,4)
-                if (currentTileIndex > oldIndex && currentTileIndex <= newIndex) {
-                    background[y][x]--;
-                }
-            // case 3: moving backward (e.g., index 5 -> 2)
-            } else {
-                // tiles between new and old positions shift right by 1
-                // (e.g., tiles 2,3,4 become 3,4,5)
-                if (currentTileIndex >= newIndex && currentTileIndex < oldIndex) {
-                    background[y][x]++;
-                }
+            } else if (background[y][x] === newIndex) {
+                background[y][x] = oldIndex;
             }
         }
     }
 
     if (selectedTileIndex === oldIndex) {
         selectedTileIndex = newIndex;
-    } else if (oldIndex < newIndex) {
-        if (selectedTileIndex > oldIndex && selectedTileIndex <= newIndex) {
-            selectedTileIndex--;
-        }
-    } else {
-        if (selectedTileIndex >= newIndex && selectedTileIndex < oldIndex) {
-            selectedTileIndex++;
-        }
+    } else if (selectedTileIndex === newIndex) {
+        selectedTileIndex = oldIndex;
     }
 
     redrawBackground();
