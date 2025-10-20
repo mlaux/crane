@@ -332,3 +332,41 @@ function updatePaletteUI() {
         editorPaletteEntries[k].style.backgroundColor = editorPaletteColors[k];
     }
 }
+
+let unusedColorsShown = false;
+
+function showUnusedColors() {
+    if (unusedColorsShown) {
+        for (let k = 0; k < paletteEntries.length; k++) {
+            paletteEntries[k].classList.remove('palette-entry-unused');
+        }
+        unusedColorsShown = false;
+        return;
+    }
+
+    const usedColors = new Set();
+
+    for (let k = 0; k < tiles.length; k++) {
+        const tile = tiles[k];
+        const basePaletteIndex = tile.palette * 16;
+
+        for (let pixelIndex = 0; pixelIndex < tile.data.length; pixelIndex++) {
+            const colorIndex = parseInt(tile.data[pixelIndex]);
+            if (colorIndex !== 0) {
+                usedColors.add(basePaletteIndex + colorIndex);
+            }
+        }
+    }
+
+    for (let k = 0; k < paletteEntries.length; k++) {
+        if (k % 16 === 0) {
+            continue;
+        }
+
+        if (!usedColors.has(k)) {
+            paletteEntries[k].classList.add('palette-entry-unused');
+        }
+    }
+
+    unusedColorsShown = true;
+}
