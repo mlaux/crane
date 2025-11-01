@@ -28,6 +28,7 @@ const BG_HEIGHT_TILES = 32;
 const BG_SCALE_FACTOR = 2;
 
 const bgCanvas = document.getElementById('background-canvas');
+const bgUnderlay = document.getElementById('background-underlay');
 const overlay = document.getElementById('background-overlay');
 
 const editorOverlay = document.getElementById('tile-editor-overlay');

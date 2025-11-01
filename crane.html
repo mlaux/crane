@@ -40,6 +40,7 @@
             <fieldset id="background-editor">
                 <legend>Background</legend>
                 <div id="background-container">
+                    <div id="background-underlay"></div>
                     <canvas width="512" height="512" id="background-canvas"></canvas>
                     <canvas width="16" height="16" id="background-overlay"></div>
                 </div>
@@ -72,6 +73,9 @@
                 <p>
                     <button onclick="saveProject()">Save</button>
                     <button onclick="loadProject()">Load</button>
+                </p>
+                <p>
+                    <button onclick="importReferenceImage()">Import reference image</button>
                 </p>
             </fieldset>
             <fieldset class="bottom-options-panel">

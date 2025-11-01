@@ -176,3 +176,27 @@ function loadSinglePalette() {
 function getProjectName() {
     return document.getElementById('project-name').value || 'Untitled';
 }
+
+function importReferenceImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', evt => {
+        const file = evt.target.files[0];
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = readerEvent => {
+            bgUnderlay.style.backgroundImage = `url(${readerEvent.target.result})`;
+        };
+        reader.onloadend = () => {
+            document.body.removeChild(input);
+        };
+    });
+
+    input.click();
+}

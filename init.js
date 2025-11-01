@@ -110,10 +110,16 @@ function initializeBackground() {
     bgCanvas.style.width = `${tileSize * BG_WIDTH_TILES * BG_SCALE_FACTOR}px`;
     bgCanvas.style.height = `${tileSize * BG_HEIGHT_TILES * BG_SCALE_FACTOR}px`;
 
+    bgUnderlay.style.width = `${tileSize * BG_WIDTH_TILES * BG_SCALE_FACTOR}px`;
+    bgUnderlay.style.height = `${tileSize * BG_HEIGHT_TILES * BG_SCALE_FACTOR}px`;
+
     overlay.width = tileSize;
     overlay.height = tileSize;
     overlay.style.width = `${tileSize * BG_SCALE_FACTOR}px`;
     overlay.style.height = `${tileSize * BG_SCALE_FACTOR}px`;
+
+    const bgContext = bgCanvas.getContext('2d');
+    bgContext.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
 
     background.length = 0;
     for (let y = 0; y < BG_HEIGHT_TILES; y++) {
