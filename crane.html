@@ -54,10 +54,19 @@
                     <div id="grid">
                         
                     </div>
-                    <button id="zoom-out">Zoom out</button>
-                    <button id="zoom-in">Zoom in</button>
-                    <button id="toggle-grid">Hide grid</button>
-                    <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
+                    <p>
+                        <button id="zoom-out">Zoom out</button>
+                        <button id="zoom-in">Zoom in</button>
+                        <button id="toggle-grid">Hide grid</button>
+                    </p>
+                    <p>
+                        <button onclick="flipTileHorizontal()">Flip horizontal</button>
+                        <button onclick="flipTileVertical()">Flip vertical</button>
+                    </p>
+                    <p>
+                        Palette
+                        <input id="editor-palette-selector" type="number" min="0" max="7" value="0">
+                    </p>
                     <div id="editor-palette-area"></div>
                 </div>
             </div>

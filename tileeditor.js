@@ -1,4 +1,12 @@
 
+function getPixel(x, y) {
+    return parseInt(pixels[y][x].getAttribute('data-palette-index'));
+}
+
+function setPixel(x, y, color) {
+    pixels[y][x].setAttribute('data-palette-index', color.toString());
+}
+
 function openTileEditor(tile) {
     if (!tile) {
         tile = createTile();
@@ -7,7 +15,7 @@ function openTileEditor(tile) {
 
     for (let y = 0; y < tileSize; y++) {
         for (let x = 0; x < tileSize; x++) {
-            pixels[y][x].setAttribute('data-palette-index', tile.data[y * tileSize + x].toString());
+            setPixel(x, y, tile.data[y * tileSize + x]);
         }
     }
 
@@ -22,8 +30,7 @@ function closeTileEditor() {
     // copy from pixel editor to tile data
     for (let y = 0; y < tileSize; y++) {
         for (let x = 0; x < tileSize; x++) {
-            const colorIndex = parseInt(pixels[y][x].getAttribute('data-palette-index'));
-            editedTile.data[y * tileSize + x] = colorIndex;
+            editedTile.data[y * tileSize + x] = getPixel(x, y);
         }
     }
 
@@ -104,14 +111,37 @@ function toggleGrid() {
     }
 }
 
+function flipTileHorizontal() {
+    for (let y = 0; y < tileSize; y++) {
+        for (let x = 0; x < tileSize / 2; x++) {
+            const left = getPixel(x, y);
+            const right = getPixel(tileSize - 1 - x, y);
+            setPixel(x, y, right);
+            setPixel(tileSize - 1 - x, y, left);
+        }
+    }
+    redrawPixels();
+}
+
+function flipTileVertical() {
+    for (let y = 0; y < tileSize / 2; y++) {
+        for (let x = 0; x < tileSize; x++) {
+            const top = getPixel(x, y);
+            const bottom = getPixel(x, tileSize - 1 - y);
+            setPixel(x, y, bottom);
+            setPixel(x, tileSize - 1 - y, top);
+        }
+    }
+    redrawPixels();
+}
+
 // copies data from the custom attribute to the styles
 function redrawPixels() {
     for (let y = 0; y < tileSize; y++) {
         for (let x = 0; x < tileSize; x++) {
-            const colorIndex = pixels[y][x].getAttribute('data-palette-index');
+            const colorIndex = getPixel(x, y);
             if (colorIndex == 0) {
                 pixels[y][x].style.backgroundImage = 'url("transparent.png")';
-                pixels[y][x].setAttribute('data-palette-index', '0');
             } else {
                 const color = editorPaletteColors[colorIndex];
                 pixels[y][x].style.backgroundImage = '';
